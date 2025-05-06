@@ -5,6 +5,10 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 
+// Auth Context
+import { AuthProvider } from "@/contexts/AuthContext";
+import ProtectedRoute from "@/components/auth/ProtectedRoute";
+
 // Layout and Pages
 import Layout from "@/components/layout/Layout";
 import Dashboard from "@/pages/Dashboard";
@@ -21,24 +25,30 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <Routes>
-          <Route path="/login" element={<Login />} />
-          
-          {/* Protected routes with Layout */}
-          <Route path="/" element={<Layout />}>
-            <Route index element={<Dashboard />} />
-            <Route path="clients" element={<Clients />} />
-            <Route path="jobs" element={<Jobs />} />
-            <Route path="quotes" element={<Dashboard />} />
-            <Route path="invoices" element={<Dashboard />} />
-            <Route path="payments" element={<Dashboard />} />
-            <Route path="schedule" element={<Dashboard />} />
-            <Route path="time-tracking" element={<Dashboard />} />
-          </Route>
-          
-          {/* Catch-all route */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
+        <AuthProvider>
+          <Routes>
+            <Route path="/login" element={<Login />} />
+            
+            {/* Protected routes with Layout */}
+            <Route path="/" element={
+              <ProtectedRoute>
+                <Layout />
+              </ProtectedRoute>
+            }>
+              <Route index element={<Dashboard />} />
+              <Route path="clients" element={<Clients />} />
+              <Route path="jobs" element={<Jobs />} />
+              <Route path="quotes" element={<Dashboard />} />
+              <Route path="invoices" element={<Dashboard />} />
+              <Route path="payments" element={<Dashboard />} />
+              <Route path="schedule" element={<Dashboard />} />
+              <Route path="time-tracking" element={<Dashboard />} />
+            </Route>
+            
+            {/* Catch-all route */}
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>

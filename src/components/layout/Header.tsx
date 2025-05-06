@@ -1,6 +1,6 @@
 
 import { useState } from 'react';
-import { Bell, Search, User } from 'lucide-react';
+import { Bell, LogOut, Search, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -12,12 +12,14 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { Link } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function Header() {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const { signOut, user } = useAuth();
 
   return (
-    <header className="bg-white shadow-sm lg:pl-64">
+    <header className="bg-white shadow-sm">
       <div className="flex h-16 items-center justify-between px-4 sm:px-6 lg:px-8">
         <div className="flex items-center gap-x-4">
           {isSearchOpen ? (
@@ -68,7 +70,9 @@ export default function Header() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuLabel>My Account</DropdownMenuLabel>
+              <DropdownMenuLabel>
+                {user?.email || 'My Account'}
+              </DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem asChild>
                 <Link to="/profile">Profile</Link>
@@ -77,8 +81,9 @@ export default function Header() {
                 <Link to="/settings">Settings</Link>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem asChild>
-                <Link to="/login">Sign out</Link>
+              <DropdownMenuItem onClick={() => signOut()}>
+                <LogOut className="mr-2 h-4 w-4" />
+                <span>Sign out</span>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

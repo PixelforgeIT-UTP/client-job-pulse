@@ -9,7 +9,178 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      clients: {
+        Row: {
+          address: string | null
+          created_at: string | null
+          email: string | null
+          id: string
+          name: string
+          phone: string | null
+          user_id: string | null
+        }
+        Insert: {
+          address?: string | null
+          created_at?: string | null
+          email?: string | null
+          id?: string
+          name: string
+          phone?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          address?: string | null
+          created_at?: string | null
+          email?: string | null
+          id?: string
+          name?: string
+          phone?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      invoices: {
+        Row: {
+          amount: number | null
+          created_at: string | null
+          due_date: string | null
+          id: string
+          job_id: string | null
+          paid: boolean | null
+        }
+        Insert: {
+          amount?: number | null
+          created_at?: string | null
+          due_date?: string | null
+          id?: string
+          job_id?: string | null
+          paid?: boolean | null
+        }
+        Update: {
+          amount?: number | null
+          created_at?: string | null
+          due_date?: string | null
+          id?: string
+          job_id?: string | null
+          paid?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoices_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      jobs: {
+        Row: {
+          assigned_to: string | null
+          client_id: string | null
+          completed_at: string | null
+          created_at: string | null
+          description: string | null
+          id: string
+          scheduled_at: string | null
+          status: string | null
+          title: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          client_id?: string | null
+          completed_at?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          scheduled_at?: string | null
+          status?: string | null
+          title: string
+        }
+        Update: {
+          assigned_to?: string | null
+          client_id?: string | null
+          completed_at?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          scheduled_at?: string | null
+          status?: string | null
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "jobs_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          created_at: string | null
+          full_name: string | null
+          id: string
+          role: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          full_name?: string | null
+          id: string
+          role?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          full_name?: string | null
+          id?: string
+          role?: string | null
+        }
+        Relationships: []
+      }
+      quotes: {
+        Row: {
+          amount: number | null
+          client_id: string | null
+          created_at: string | null
+          id: string
+          job_id: string | null
+          status: string | null
+        }
+        Insert: {
+          amount?: number | null
+          client_id?: string | null
+          created_at?: string | null
+          id?: string
+          job_id?: string | null
+          status?: string | null
+        }
+        Update: {
+          amount?: number | null
+          client_id?: string | null
+          created_at?: string | null
+          id?: string
+          job_id?: string | null
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quotes_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quotes_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never

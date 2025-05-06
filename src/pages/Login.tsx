@@ -1,4 +1,5 @@
 
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -10,19 +11,33 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useState } from "react";
+import { useAuth } from "@/contexts/AuthContext";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useNavigate } from "react-router-dom";
+import { Loader2 } from "lucide-react";
 
 export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [isSignUp, setIsSignUp] = useState(false);
+  const [error, setError] = useState("");
+  const { signIn, signUp, loading } = useAuth();
   const navigate = useNavigate();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // In a real app, we would handle authentication here
-    // For now, we'll just navigate to the dashboard
-    navigate("/");
+    setError("");
+
+    try {
+      if (isSignUp) {
+        await signUp(email, password);
+      } else {
+        await signIn(email, password);
+        navigate('/');
+      }
+    } catch (error: any) {
+      setError(error.message || "Authentication failed");
+    }
   };
 
   return (
@@ -52,13 +67,24 @@ export default function Login() {
               <h1 className="text-2xl font-bold">Job Pulse</h1>
             </div>
           </div>
-          <CardTitle className="text-xl text-center">Sign in to your account</CardTitle>
+          <CardTitle className="text-xl text-center">
+            {isSignUp ? "Create an account" : "Sign in to your account"}
+          </CardTitle>
           <CardDescription className="text-center">
-            Enter your email and password to access your dashboard
+            {isSignUp 
+              ? "Enter your email and password to create your account" 
+              : "Enter your email and password to access your dashboard"}
           </CardDescription>
         </CardHeader>
+        {error && (
+          <div className="px-6">
+            <Alert variant="destructive">
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          </div>
+        )}
         <form onSubmit={handleSubmit}>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-4 mt-2">
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <Input 
@@ -73,9 +99,11 @@ export default function Login() {
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <Label htmlFor="password">Password</Label>
-                <a href="#" className="text-sm text-primary hover:underline">
-                  Forgot password?
-                </a>
+                {!isSignUp && (
+                  <a href="#" className="text-sm text-primary hover:underline">
+                    Forgot password?
+                  </a>
+                )}
               </div>
               <Input 
                 id="password" 
@@ -87,12 +115,41 @@ export default function Login() {
             </div>
           </CardContent>
           <CardFooter className="flex flex-col">
-            <Button type="submit" className="w-full mb-3">Sign in</Button>
+            <Button 
+              type="submit" 
+              className="w-full mb-3" 
+              disabled={loading}
+            >
+              {loading ? (
+                <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> {isSignUp ? "Creating account..." : "Signing in..."}</>
+              ) : (
+                isSignUp ? "Create account" : "Sign in"
+              )}
+            </Button>
             <p className="text-center text-sm text-muted-foreground">
-              Don&apos;t have an account?{" "}
-              <a href="#" className="text-primary hover:underline">
-                Sign up
-              </a>
+              {isSignUp ? (
+                <>
+                  Already have an account?{" "}
+                  <button 
+                    type="button"
+                    onClick={() => setIsSignUp(false)} 
+                    className="text-primary hover:underline"
+                  >
+                    Sign in
+                  </button>
+                </>
+              ) : (
+                <>
+                  Don&apos;t have an account?{" "}
+                  <button 
+                    type="button"
+                    onClick={() => setIsSignUp(true)} 
+                    className="text-primary hover:underline"
+                  >
+                    Sign up
+                  </button>
+                </>
+              )}
             </p>
           </CardFooter>
         </form>
