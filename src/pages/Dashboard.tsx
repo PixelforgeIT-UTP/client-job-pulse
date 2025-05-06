@@ -20,6 +20,7 @@ export default function Dashboard() {
           icon={<Users size={20} />}
           trend={12}
           trendLabel="vs. last month"
+          linkTo="/clients"
         />
         <StatCard
           title="Active Jobs"
@@ -27,12 +28,14 @@ export default function Dashboard() {
           icon={<Briefcase size={20} />}
           trend={5}
           trendLabel="vs. last month"
+          linkTo="/jobs"
         />
         <StatCard
           title="Pending Invoices"
           value="$12,450"
           icon={<FileText size={20} />}
           description="7 invoices awaiting payment"
+          linkTo="/invoices"
         />
         <StatCard
           title="Revenue (MTD)"
@@ -40,6 +43,7 @@ export default function Dashboard() {
           icon={<CreditCard size={20} />}
           trend={8}
           trendLabel="vs. last month"
+          linkTo="/payments"
         />
       </div>
 

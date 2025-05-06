@@ -1,57 +1,66 @@
 
-import { cn } from '@/lib/utils';
+import { Link } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
+import { cn } from '@/lib/utils';
 
 interface StatCardProps {
   title: string;
-  value: string | number;
-  icon?: React.ReactNode;
-  description?: string;
+  value: string;
+  icon: React.ReactNode;
   trend?: number;
   trendLabel?: string;
-  className?: string;
+  description?: string;
+  linkTo?: string;
 }
 
-export default function StatCard({ 
+export default function StatCard({
   title,
   value,
   icon,
-  description,
   trend,
   trendLabel,
-  className
+  description,
+  linkTo = '/'
 }: StatCardProps) {
-  const isTrendPositive = trend && trend > 0;
-  const isTrendNegative = trend && trend < 0;
-
-  return (
-    <Card className={cn("overflow-hidden", className)}>
-      <CardContent className="p-6">
-        <div className="flex items-center justify-between">
-          <p className="text-sm font-medium text-muted-foreground">{title}</p>
-          {icon && <div className="text-muted-foreground">{icon}</div>}
-        </div>
-        <div className="mt-2 flex items-baseline">
-          <p className="text-2xl font-semibold">{value}</p>
+  const content = (
+    <CardContent className={cn(
+      "flex items-center justify-between gap-4 p-6",
+      linkTo && "hover:bg-muted/50 cursor-pointer transition-colors"
+    )}>
+      <div className="space-y-1">
+        <p className="text-sm font-medium text-muted-foreground">{title}</p>
+        <div className="flex items-baseline gap-2">
+          <h2 className="text-3xl font-semibold tracking-tight">{value}</h2>
           {trend !== undefined && (
-            <span 
-              className={cn(
-                "ml-2 text-xs font-medium",
-                isTrendPositive ? "text-green-600" : "",
-                isTrendNegative ? "text-red-600" : "",
-                !isTrendPositive && !isTrendNegative ? "text-gray-500" : ""
-              )}
-            >
-              {isTrendPositive && '+'}
-              {trend}%
-              {trendLabel && <span className="ml-1">{trendLabel}</span>}
-            </span>
+            <div className={cn(
+              "text-xs font-medium",
+              trend > 0 ? "text-green-500" : trend < 0 ? "text-red-500" : ""
+            )}>
+              {trend > 0 && "+"}{trend}% {trendLabel}
+            </div>
           )}
         </div>
-        {description && (
-          <p className="mt-1 text-xs text-muted-foreground">{description}</p>
-        )}
-      </CardContent>
+        {description && <p className="text-xs text-muted-foreground">{description}</p>}
+      </div>
+      <div className="h-12 w-12 rounded-md bg-muted flex items-center justify-center">
+        {icon}
+      </div>
+    </CardContent>
+  );
+
+  if (linkTo) {
+    return (
+      <Card className="overflow-hidden">
+        <Link to={linkTo}>
+          {content}
+        </Link>
+      </Card>
+    );
+  }
+
+  return (
+    <Card>
+      {content}
     </Card>
   );
 }

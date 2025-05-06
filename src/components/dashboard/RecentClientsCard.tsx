@@ -1,47 +1,63 @@
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Link } from 'react-router-dom';
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Link } from "react-router-dom";
 
 // Mock data for recent clients
 const recentClients = [
-  { id: 1, name: "Acme Corporation", email: "contact@acme.com", jobs: 3, status: "active" },
-  { id: 2, name: "Globex Industries", email: "info@globex.com", jobs: 1, status: "new" },
-  { id: 3, name: "Wayne Enterprises", email: "business@wayne.com", jobs: 5, status: "active" },
-  { id: 4, name: "Stark Industries", email: "hello@stark.com", jobs: 2, status: "active" },
+  {
+    id: 1,
+    name: "Acme Corporation",
+    email: "contact@acme.com",
+    date: "Added May 28, 2025"
+  },
+  {
+    id: 2,
+    name: "Globex Industries",
+    email: "info@globex.com",
+    date: "Added May 25, 2025"
+  },
+  {
+    id: 3,
+    name: "Wayne Enterprises",
+    email: "business@wayne.com",
+    date: "Added May 20, 2025"
+  }
 ];
 
 export default function RecentClientsCard() {
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between pb-2">
-        <div>
-          <CardTitle className="text-lg font-medium">Recent Clients</CardTitle>
-          <CardDescription>Your newest client relationships</CardDescription>
-        </div>
-        <Button variant="outline" size="sm" asChild>
-          <Link to="/clients">View all</Link>
-        </Button>
+      <CardHeader className="pb-3">
+        <CardTitle>Recent Clients</CardTitle>
+        <CardDescription>New clients added in the last 30 days</CardDescription>
       </CardHeader>
-      <CardContent>
-        <div className="space-y-4">
-          {recentClients.map((client) => (
-            <div key={client.id} className="flex items-center justify-between">
-              <div>
-                <p className="font-medium">{client.name}</p>
-                <p className="text-sm text-muted-foreground">{client.email}</p>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-muted-foreground">{client.jobs} jobs</span>
-                <Badge variant={client.status === 'new' ? "secondary" : "default"}>
-                  {client.status}
-                </Badge>
-              </div>
+      <CardContent className="space-y-4">
+        {recentClients.map((client) => (
+          <div key={client.id} className="flex items-start space-x-4 rounded-md border p-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary text-primary-foreground">
+              {client.name.charAt(0)}
             </div>
-          ))}
-        </div>
+            <div className="space-y-1">
+              <Link to="/clients" className="font-medium hover:underline">{client.name}</Link>
+              <div className="text-sm text-muted-foreground">{client.email}</div>
+              <div className="text-xs text-muted-foreground">{client.date}</div>
+            </div>
+          </div>
+        ))}
       </CardContent>
+      <CardFooter>
+        <Button asChild variant="outline" className="w-full">
+          <Link to="/clients">View All Clients</Link>
+        </Button>
+      </CardFooter>
     </Card>
   );
 }
