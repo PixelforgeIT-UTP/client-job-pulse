@@ -1,11 +1,76 @@
 
 import { Briefcase, CreditCard, FileText, Users } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 import StatCard from '@/components/dashboard/StatCard';
 import RecentClientsCard from '@/components/dashboard/RecentClientsCard';
 import UpcomingJobsCard from '@/components/dashboard/UpcomingJobsCard';
 import InvoiceStatusChart from '@/components/dashboard/InvoiceStatusChart';
 
 export default function Dashboard() {
+  const [stats, setStats] = useState({
+    totalClients: '0',
+    activeJobs: '0',
+    pendingInvoices: '0',
+    revenueMonth: '0',
+    pendingInvoicesCount: 0
+  });
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    fetchDashboardStats();
+  }, []);
+
+  async function fetchDashboardStats() {
+    setIsLoading(true);
+    try {
+      // Fetch total clients
+      const { count: clientCount } = await supabase
+        .from('clients')
+        .select('*', { count: 'exact', head: true });
+
+      // Fetch active jobs
+      const { count: activeJobsCount } = await supabase
+        .from('jobs')
+        .select('*', { count: 'exact', head: true })
+        .in('status', ['scheduled', 'in_progress']);
+
+      // Fetch pending invoices
+      const { data: pendingInvoices } = await supabase
+        .from('invoices')
+        .select('amount')
+        .eq('paid', false);
+
+      // Calculate total pending invoice amount
+      const pendingAmount = pendingInvoices?.reduce((sum, invoice) => sum + (invoice.amount || 0), 0) || 0;
+
+      // Fetch paid invoices for current month (revenue)
+      const startOfMonth = new Date();
+      startOfMonth.setDate(1);
+      startOfMonth.setHours(0, 0, 0, 0);
+
+      const { data: paidInvoices } = await supabase
+        .from('invoices')
+        .select('amount')
+        .eq('paid', true)
+        .gte('created_at', startOfMonth.toISOString());
+
+      const monthlyRevenue = paidInvoices?.reduce((sum, invoice) => sum + (invoice.amount || 0), 0) || 0;
+
+      setStats({
+        totalClients: clientCount?.toString() || '0',
+        activeJobs: activeJobsCount?.toString() || '0',
+        pendingInvoices: `$${pendingAmount.toLocaleString()}`,
+        revenueMonth: `$${monthlyRevenue.toLocaleString()}`,
+        pendingInvoicesCount: pendingInvoices?.length || 0
+      });
+    } catch (error) {
+      console.error("Error fetching dashboard stats:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
   return (
     <div className="space-y-6">
       <div>
@@ -13,10 +78,10 @@ export default function Dashboard() {
         <p className="text-muted-foreground">Get an overview of your business performance</p>
       </div>
 
-      <div className="dashboard-grid">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <StatCard
           title="Total Clients"
-          value="36"
+          value={isLoading ? "Loading..." : stats.totalClients}
           icon={<Users size={20} />}
           trend={12}
           trendLabel="vs. last month"
@@ -24,7 +89,7 @@ export default function Dashboard() {
         />
         <StatCard
           title="Active Jobs"
-          value="18"
+          value={isLoading ? "Loading..." : stats.activeJobs}
           icon={<Briefcase size={20} />}
           trend={5}
           trendLabel="vs. last month"
@@ -32,14 +97,14 @@ export default function Dashboard() {
         />
         <StatCard
           title="Pending Invoices"
-          value="$12,450"
+          value={isLoading ? "Loading..." : stats.pendingInvoices}
           icon={<FileText size={20} />}
-          description="7 invoices awaiting payment"
+          description={`${stats.pendingInvoicesCount} invoices awaiting payment`}
           linkTo="/invoices"
         />
         <StatCard
           title="Revenue (MTD)"
-          value="$24,780"
+          value={isLoading ? "Loading..." : stats.revenueMonth}
           icon={<CreditCard size={20} />}
           trend={8}
           trendLabel="vs. last month"
