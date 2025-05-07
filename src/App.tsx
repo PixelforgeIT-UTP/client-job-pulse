@@ -4,6 +4,8 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import NewQuote from '@/pages/NewQuote';
+
 
 // Auth Context
 import { AuthProvider } from "@/contexts/AuthContext";
@@ -48,6 +50,7 @@ const App = () => (
               <Route path="payments" element={<Payments />} />
               <Route path="schedule" element={<Schedule />} />
               <Route path="time-tracking" element={<TimeTracking />} />
+              <Route path="/quotes/new" element={<NewQuote />} />
             </Route>
             
             {/* Catch-all route */}
