@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -24,6 +25,7 @@ export default function Quotes() {
   const [searchTerm, setSearchTerm] = useState('');
   const [quotes, setQuotes] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchQuotes = async () => {
@@ -69,7 +71,7 @@ export default function Quotes() {
           <h1 className="text-2xl font-bold tracking-tight">Quotes</h1>
           <p className="text-muted-foreground">Manage your client quotes</p>
         </div>
-        <Button>
+        <Button onClick={() => navigate('/quotes/new')}>
           <Plus className="mr-2 h-4 w-4" />
           New Quote
         </Button>
