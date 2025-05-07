@@ -1,7 +1,6 @@
-
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
-import { CalendarIcon, Clock, DollarSign, MapPin, Image } from "lucide-react";
+import { CalendarIcon, Clock, DollarSign, MapPin, Image, Plus } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
 import { Button } from "@/components/ui/button";
@@ -13,6 +12,8 @@ import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { ClientSelector } from "./ClientSelector";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 interface JobFormDialogProps {
   isOpen: boolean;
@@ -28,6 +29,8 @@ export function JobFormDialog({ isOpen, onClose, onSuccess, initialData }: JobFo
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [images, setImages] = useState<File[]>([]);
+  const [imagePreviewUrls, setImagePreviewUrls] = useState<string[]>([]);
+  const [existingPhotos, setExistingPhotos] = useState<any[]>([]);
 
   const form = useForm({
     defaultValues: {
@@ -40,6 +43,30 @@ export function JobFormDialog({ isOpen, onClose, onSuccess, initialData }: JobFo
       duration: initialData?.duration || "",
     },
   });
+
+  useEffect(() => {
+    if (initialData?.id) {
+      fetchJobPhotos(initialData.id);
+    }
+  }, [initialData]);
+
+  async function fetchJobPhotos(jobId: string) {
+    try {
+      const { data, error } = await supabase
+        .storage
+        .from('job-photos')
+        .list(jobId);
+
+      if (error) throw error;
+      
+      if (data && data.length > 0) {
+        const photos = data.filter(item => !item.name.endsWith('/'));
+        setExistingPhotos(photos);
+      }
+    } catch (error) {
+      console.error('Error fetching job photos:', error);
+    }
+  }
 
   async function onSubmit(data: any) {
     setIsSubmitting(true);
@@ -93,6 +120,11 @@ export function JobFormDialog({ isOpen, onClose, onSuccess, initialData }: JobFo
 
           if (uploadError) {
             console.error("Error uploading image:", uploadError);
+            toast({
+              title: "Warning",
+              description: `Failed to upload ${image.name}`,
+              variant: "destructive",
+            });
           }
         }
       }
@@ -117,13 +149,22 @@ export function JobFormDialog({ isOpen, onClose, onSuccess, initialData }: JobFo
 
   function handleImageChange(e: React.ChangeEvent<HTMLInputElement>) {
     if (e.target.files && e.target.files.length > 0) {
-      setImages(Array.from(e.target.files));
+      const selectedFiles = Array.from(e.target.files);
+      setImages(selectedFiles);
+      
+      // Create preview URLs for the images
+      const previews = selectedFiles.map(file => URL.createObjectURL(file));
+      setImagePreviewUrls(previews);
     }
+  }
+
+  function getPhotoUrl(jobId: string, fileName: string) {
+    return `${supabase.storage.from('job-photos').getPublicUrl(`${jobId}/${fileName}`).data.publicUrl}`;
   }
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-[600px]">
+      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{initialData ? "Edit Job" : "Create New Job"}</DialogTitle>
         </DialogHeader>
@@ -151,8 +192,7 @@ export function JobFormDialog({ isOpen, onClose, onSuccess, initialData }: JobFo
                 <FormItem>
                   <FormLabel>Client*</FormLabel>
                   <FormControl>
-                    <Input placeholder="Select client" {...field} />
-                    {/* Note: In a real implementation, this would be a dropdown/select component with client options */}
+                    <ClientSelector value={field.value} onChange={field.onChange} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -292,14 +332,61 @@ export function JobFormDialog({ isOpen, onClose, onSuccess, initialData }: JobFo
                   Photos
                 </div>
               </FormLabel>
-              <FormControl>
-                <Input 
-                  type="file" 
-                  accept="image/*" 
-                  multiple 
-                  onChange={handleImageChange} 
-                />
-              </FormControl>
+              <div className="space-y-3">
+                <FormControl>
+                  <label className="cursor-pointer">
+                    <div className="flex items-center justify-center border-2 border-dashed border-gray-300 rounded-md p-6 hover:border-primary">
+                      <div className="text-center">
+                        <Plus className="mx-auto h-6 w-6 text-muted-foreground" />
+                        <span className="mt-2 block text-sm font-medium text-muted-foreground">
+                          Add photos
+                        </span>
+                      </div>
+                      <Input 
+                        type="file" 
+                        accept="image/*"
+                        multiple
+                        onChange={handleImageChange}
+                        className="hidden"
+                      />
+                    </div>
+                  </label>
+                </FormControl>
+                
+                {/* Preview of selected images */}
+                {imagePreviewUrls.length > 0 && (
+                  <div className="mt-4">
+                    <h4 className="text-sm font-medium mb-2">New Photos</h4>
+                    <div className="grid grid-cols-4 gap-2">
+                      {imagePreviewUrls.map((url, index) => (
+                        <Avatar key={index} className="h-16 w-16 rounded-md">
+                          <AvatarImage src={url} alt={`Preview ${index}`} className="object-cover" />
+                          <AvatarFallback className="rounded-md">IMG</AvatarFallback>
+                        </Avatar>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                
+                {/* Existing photos */}
+                {existingPhotos.length > 0 && (
+                  <div className="mt-4">
+                    <h4 className="text-sm font-medium mb-2">Existing Photos</h4>
+                    <div className="grid grid-cols-4 gap-2">
+                      {existingPhotos.map((photo, index) => (
+                        <Avatar key={index} className="h-16 w-16 rounded-md">
+                          <AvatarImage 
+                            src={getPhotoUrl(initialData.id, photo.name)} 
+                            alt={`Job Photo ${index}`} 
+                            className="object-cover" 
+                          />
+                          <AvatarFallback className="rounded-md">IMG</AvatarFallback>
+                        </Avatar>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
               <FormMessage />
             </FormItem>
 

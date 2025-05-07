@@ -18,6 +18,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Search } from 'lucide-react';
+import { PaymentReceiptDialog } from '@/components/payments/PaymentReceiptDialog';
 
 // Mock payment data
 const payments = [
@@ -30,12 +31,19 @@ const payments = [
 
 export default function Payments() {
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedPayment, setSelectedPayment] = useState<any>(null);
+  const [isReceiptDialogOpen, setIsReceiptDialogOpen] = useState(false);
 
   // Filter payments based on search term
   const filteredPayments = payments.filter(payment => 
     payment.client.toLowerCase().includes(searchTerm.toLowerCase()) ||
     payment.invoice.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  function handleViewReceipt(payment: any) {
+    setSelectedPayment(payment);
+    setIsReceiptDialogOpen(true);
+  }
 
   return (
     <div className="space-y-6">
@@ -90,7 +98,13 @@ export default function Payments() {
                     <TableCell className="hidden md:table-cell">{payment.date}</TableCell>
                     <TableCell className="hidden md:table-cell">{payment.method}</TableCell>
                     <TableCell className="text-right">
-                      <Button variant="outline" size="sm">Receipt</Button>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={() => handleViewReceipt(payment)}
+                      >
+                        Receipt
+                      </Button>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -106,6 +120,12 @@ export default function Payments() {
           </div>
         </CardContent>
       </Card>
+
+      <PaymentReceiptDialog
+        isOpen={isReceiptDialogOpen}
+        onClose={() => setIsReceiptDialogOpen(false)}
+        payment={selectedPayment}
+      />
     </div>
   );
 }

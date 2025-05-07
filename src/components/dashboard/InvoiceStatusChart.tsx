@@ -66,12 +66,12 @@ export default function InvoiceStatusChart() {
 
   const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent, name }) => {
     const RADIAN = Math.PI / 180;
-    const radius = innerRadius + (outerRadius - innerRadius) * 0.7;
+    const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
     const x = cx + radius * Math.cos(-midAngle * RADIAN);
     const y = cy + radius * Math.sin(-midAngle * RADIAN);
 
-    // Only show the percentage if it's 10% or more (to prevent overlap)
-    if (percent < 0.1) return null;
+    // Only show the percentage if it's large enough (to prevent overlap)
+    if (percent < 0.05) return null;
 
     return (
       <text 
@@ -80,6 +80,7 @@ export default function InvoiceStatusChart() {
         fill="white" 
         textAnchor={x > cx ? 'start' : 'end'} 
         dominantBaseline="central"
+        fontSize={12}
       >
         {`${(percent * 100).toFixed(0)}%`}
       </text>
@@ -113,7 +114,7 @@ export default function InvoiceStatusChart() {
                 ))}
               </Pie>
               <Tooltip formatter={(value) => `${value}%`} />
-              <Legend />
+              <Legend verticalAlign="bottom" height={36} />
             </PieChart>
           </ResponsiveContainer>
         </div>
