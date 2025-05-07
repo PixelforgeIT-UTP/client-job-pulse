@@ -1,6 +1,7 @@
 
 import { Briefcase, CreditCard, FileText, Users } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import StatCard from '@/components/dashboard/StatCard';
 import RecentClientsCard from '@/components/dashboard/RecentClientsCard';
@@ -42,7 +43,7 @@ export default function Dashboard() {
         .eq('paid', false);
 
       // Calculate total pending invoice amount
-      const pendingAmount = pendingInvoices?.reduce((sum, invoice) => sum + (invoice.amount || 0), 0) || 0;
+      const pendingAmount = pendingInvoices?.reduce((sum, invoice) => sum + (Number(invoice.amount) || 0), 0) || 0;
 
       // Fetch paid invoices for current month (revenue)
       const startOfMonth = new Date();
@@ -55,7 +56,7 @@ export default function Dashboard() {
         .eq('paid', true)
         .gte('created_at', startOfMonth.toISOString());
 
-      const monthlyRevenue = paidInvoices?.reduce((sum, invoice) => sum + (invoice.amount || 0), 0) || 0;
+      const monthlyRevenue = paidInvoices?.reduce((sum, invoice) => sum + (Number(invoice.amount) || 0), 0) || 0;
 
       setStats({
         totalClients: clientCount?.toString() || '0',
@@ -79,37 +80,45 @@ export default function Dashboard() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <StatCard
-          title="Total Clients"
-          value={isLoading ? "Loading..." : stats.totalClients}
-          icon={<Users size={20} />}
-          trend={12}
-          trendLabel="vs. last month"
-          linkTo="/clients"
-        />
-        <StatCard
-          title="Active Jobs"
-          value={isLoading ? "Loading..." : stats.activeJobs}
-          icon={<Briefcase size={20} />}
-          trend={5}
-          trendLabel="vs. last month"
-          linkTo="/jobs"
-        />
-        <StatCard
-          title="Pending Invoices"
-          value={isLoading ? "Loading..." : stats.pendingInvoices}
-          icon={<FileText size={20} />}
-          description={`${stats.pendingInvoicesCount} invoices awaiting payment`}
-          linkTo="/invoices"
-        />
-        <StatCard
-          title="Revenue (MTD)"
-          value={isLoading ? "Loading..." : stats.revenueMonth}
-          icon={<CreditCard size={20} />}
-          trend={8}
-          trendLabel="vs. last month"
-          linkTo="/payments"
-        />
+        <Link to="/clients" className="block no-underline">
+          <StatCard
+            title="Total Clients"
+            value={isLoading ? "Loading..." : stats.totalClients}
+            icon={<Users size={20} />}
+            trend={12}
+            trendLabel="vs. last month"
+            linkTo="/clients"
+          />
+        </Link>
+        <Link to="/jobs" className="block no-underline">
+          <StatCard
+            title="Active Jobs"
+            value={isLoading ? "Loading..." : stats.activeJobs}
+            icon={<Briefcase size={20} />}
+            trend={5}
+            trendLabel="vs. last month"
+            linkTo="/jobs"
+          />
+        </Link>
+        <Link to="/invoices" className="block no-underline">
+          <StatCard
+            title="Pending Invoices"
+            value={isLoading ? "Loading..." : stats.pendingInvoices}
+            icon={<FileText size={20} />}
+            description={`${stats.pendingInvoicesCount} invoices awaiting payment`}
+            linkTo="/invoices"
+          />
+        </Link>
+        <Link to="/payments" className="block no-underline">
+          <StatCard
+            title="Revenue (MTD)"
+            value={isLoading ? "Loading..." : stats.revenueMonth}
+            icon={<CreditCard size={20} />}
+            trend={8}
+            trendLabel="vs. last month"
+            linkTo="/payments"
+          />
+        </Link>
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">

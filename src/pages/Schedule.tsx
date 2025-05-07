@@ -58,7 +58,8 @@ export default function Schedule() {
       }
       
       const fullDate = date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
-      const key = i === 0 ? 'today' : date.toLocaleDateString('en-US', { weekday: 'lowercase' });
+      // Fix: change 'lowercase' to 'short' for the weekday format
+      const key = i === 0 ? 'today' : date.toLocaleDateString('en-US', { weekday: 'short' }).toLowerCase();
       
       daysArray.push({ date: dateLabel, fullDate, key });
     }
@@ -135,7 +136,8 @@ export default function Schedule() {
       return 'tomorrow';
     }
 
-    return jobDate.toLocaleDateString('en-US', { weekday: 'lowercase' });
+    // Fix: change 'lowercase' to 'short' for the weekday format
+    return jobDate.toLocaleDateString('en-US', { weekday: 'short' }).toLowerCase();
   };
 
   const filteredItems = activeTab === 'today' 

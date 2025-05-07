@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -19,6 +19,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Play, Pause, Plus, Clock } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
 // Mock time tracking data
 const timeEntries = [
@@ -55,15 +56,131 @@ const timeEntries = [
 ];
 
 export default function TimeTracking() {
+  const { toast } = useToast();
   const [activeTab, setActiveTab] = useState('daily');
-  const [activeTimer, setActiveTimer] = useState<number | null>(3);
+  const [activeTimer, setActiveTimer] = useState<number | null>(null);
+  const [timerEntries, setTimerEntries] = useState(timeEntries);
+  const [elapsedTime, setElapsedTime] = useState(0);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const startTimeRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+      }
+    };
+  }, []);
+
+  const formatTime = (seconds: number): string => {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const remainingSeconds = seconds % 60;
+    
+    return [
+      String(hours).padStart(2, '0'),
+      String(minutes).padStart(2, '0'),
+      String(remainingSeconds).padStart(2, '0')
+    ].join(':');
+  };
 
   const toggleTimer = (id: number) => {
-    if (activeTimer === id) {
-      setActiveTimer(null);
-    } else {
-      setActiveTimer(id);
+    // If there's an active timer and it's different from the one we're clicking
+    if (activeTimer !== null && activeTimer !== id) {
+      stopTimer();
     }
+    
+    // If we're clicking the currently active timer, stop it
+    if (activeTimer === id) {
+      stopTimer();
+    } else {
+      // Start the timer for this entry
+      startTimer(id);
+    }
+  };
+
+  const startTimer = (id: number) => {
+    // Stop any existing timer
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+    }
+
+    // Set active timer ID
+    setActiveTimer(id);
+    
+    // Get the entry
+    const entry = timerEntries.find(e => e.id === id);
+    if (!entry) return;
+    
+    // Calculate initial elapsed time from the entry's duration
+    let initialSeconds = 0;
+    if (entry.duration) {
+      const durationMatch = entry.duration.match(/(\d+)h\s*(\d+)m/);
+      if (durationMatch) {
+        const hours = parseInt(durationMatch[1], 10);
+        const minutes = parseInt(durationMatch[2], 10);
+        initialSeconds = hours * 3600 + minutes * 60;
+      }
+    }
+    
+    setElapsedTime(initialSeconds);
+    startTimeRef.current = Date.now() - (initialSeconds * 1000);
+    
+    // Update the timer every second
+    timerRef.current = setInterval(() => {
+      if (startTimeRef.current) {
+        const currentTime = Math.floor((Date.now() - startTimeRef.current) / 1000);
+        setElapsedTime(currentTime);
+      }
+    }, 1000);
+
+    // Update the entry status
+    updateEntryStatus(id, "in-progress");
+    
+    toast({
+      title: "Timer started",
+      description: `Timer for "${entry.job}" has been started.`,
+    });
+  };
+
+  const stopTimer = () => {
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+    
+    if (activeTimer !== null) {
+      // Update entry status and duration
+      const hours = Math.floor(elapsedTime / 3600);
+      const minutes = Math.floor((elapsedTime % 3600) / 60);
+      const newDuration = `${hours}h ${minutes}m`;
+      
+      updateEntryDuration(activeTimer, newDuration, "completed");
+      
+      toast({
+        title: "Timer stopped",
+        description: `Timer stopped. Total time: ${formatTime(elapsedTime)}.`,
+      });
+    }
+    
+    setActiveTimer(null);
+    startTimeRef.current = null;
+  };
+
+  const updateEntryStatus = (id: number, status: string) => {
+    setTimerEntries(entries => 
+      entries.map(entry => 
+        entry.id === id ? { ...entry, status } : entry
+      )
+    );
+  };
+
+  const updateEntryDuration = (id: number, duration: string, status: string) => {
+    setTimerEntries(entries => 
+      entries.map(entry => 
+        entry.id === id ? { ...entry, duration, status } : entry
+      )
+    );
   };
 
   const getStatusBadge = (status: string) => {
@@ -103,15 +220,19 @@ export default function TimeTracking() {
           {activeTimer ? (
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-4 border rounded-md bg-muted/50">
               <div>
-                <h3 className="font-semibold">Plumbing Repair</h3>
-                <p className="text-muted-foreground">Wayne Enterprises</p>
+                <h3 className="font-semibold">
+                  {timerEntries.find(e => e.id === activeTimer)?.job || "Unknown Job"}
+                </h3>
+                <p className="text-muted-foreground">
+                  {timerEntries.find(e => e.id === activeTimer)?.client || "No client"}
+                </p>
               </div>
               <div className="flex items-center gap-4">
-                <div className="text-2xl font-mono">00:45:12</div>
+                <div className="text-2xl font-mono">{formatTime(elapsedTime)}</div>
                 <Button 
                   variant="destructive" 
                   size="icon"
-                  onClick={() => toggleTimer(3)}
+                  onClick={() => stopTimer()}
                 >
                   <Pause className="h-4 w-4" />
                 </Button>
@@ -153,17 +274,19 @@ export default function TimeTracking() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {timeEntries.map((entry) => (
+                    {timerEntries.map((entry) => (
                       <TableRow key={entry.id}>
                         <TableCell className="font-medium">{entry.job}</TableCell>
                         <TableCell>{entry.client}</TableCell>
                         <TableCell className="hidden md:table-cell">
                           {entry.startTime} {entry.endTime ? `- ${entry.endTime}` : ''}
                         </TableCell>
-                        <TableCell className="hidden md:table-cell">{entry.duration}</TableCell>
+                        <TableCell className="hidden md:table-cell">
+                          {entry.id === activeTimer ? formatTime(elapsedTime) : entry.duration}
+                        </TableCell>
                         <TableCell>{getStatusBadge(entry.status)}</TableCell>
                         <TableCell className="text-right">
-                          {entry.status === 'in-progress' ? (
+                          {entry.id === activeTimer ? (
                             <Button 
                               variant="destructive" 
                               size="sm"

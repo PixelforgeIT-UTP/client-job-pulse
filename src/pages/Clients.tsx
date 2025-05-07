@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -17,59 +17,74 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Plus, Search } from 'lucide-react';
-
-// Mock client data
-const clients = [
-  { id: 1, name: "Acme Corporation", email: "contact@acme.com", phone: "(555) 123-4567", jobs: 3, status: "active" },
-  { id: 2, name: "Globex Industries", email: "info@globex.com", phone: "(555) 234-5678", jobs: 1, status: "new" },
-  { id: 3, name: "Wayne Enterprises", email: "business@wayne.com", phone: "(555) 345-6789", jobs: 5, status: "active" },
-  { id: 4, name: "Stark Industries", email: "hello@stark.com", phone: "(555) 456-7890", jobs: 2, status: "active" },
-  { id: 5, name: "Umbrella Corporation", email: "contact@umbrella.com", phone: "(555) 567-8901", jobs: 0, status: "inactive" },
-  { id: 6, name: "Cyberdyne Systems", email: "info@cyberdyne.com", phone: "(555) 678-9012", jobs: 1, status: "active" },
-  { id: 7, name: "Initech", email: "hello@initech.com", phone: "(555) 789-0123", jobs: 2, status: "active" },
-  { id: 8, name: "Massive Dynamic", email: "contact@massive.com", phone: "(555) 890-1234", jobs: 4, status: "active" },
-];
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
+import { ClientFormDialog } from '@/components/clients/ClientFormDialog';
 
 export default function Clients() {
+  const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState('');
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [clients, setClients] = useState<any[]>([]);
+  const [isClientFormOpen, setIsClientFormOpen] = useState(false);
+  const [selectedClient, setSelectedClient] = useState<any>(null);
+
+  useEffect(() => {
+    fetchClients();
+  }, []);
+
+  async function fetchClients() {
+    setIsLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('clients')
+        .select('*');
+
+      if (error) throw error;
+      setClients(data || []);
+    } catch (error: any) {
+      toast({
+        title: "Error fetching clients",
+        description: error.message,
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  }
 
   // Filter clients based on search term
   const filteredClients = clients.filter(client => 
-    client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    client.email.toLowerCase().includes(searchTerm.toLowerCase())
+    client.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    client.email?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'active':
-        return <Badge>Active</Badge>;
-      case 'new':
-        return <Badge variant="secondary">New</Badge>;
-      case 'inactive':
-        return <Badge variant="outline">Inactive</Badge>;
-      default:
-        return null;
+  const getStatusBadge = (client: any) => {
+    // Determine client status based on some logic
+    // For example, new clients created in the last week could be marked as "new"
+    const oneWeekAgo = new Date();
+    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+    
+    const createdAt = new Date(client.created_at);
+    
+    if (createdAt > oneWeekAgo) {
+      return <Badge variant="secondary">New</Badge>;
+    } else {
+      return <Badge>Active</Badge>;
     }
   };
 
-  const handleAddClient = (event: React.FormEvent) => {
-    event.preventDefault();
-    // In a real app, this would add the client to the database
-    setIsDialogOpen(false);
-  };
+  function handleAddClient() {
+    setSelectedClient(null);
+    setIsClientFormOpen(true);
+  }
+
+  function handleEditClient(client: any) {
+    setSelectedClient(client);
+    setIsClientFormOpen(true);
+  }
 
   return (
     <div className="space-y-6">
@@ -78,48 +93,10 @@ export default function Clients() {
           <h1 className="text-2xl font-bold tracking-tight">Clients</h1>
           <p className="text-muted-foreground">Manage your client relationships</p>
         </div>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="mr-2 h-4 w-4" />
-              Add Client
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <form onSubmit={handleAddClient}>
-              <DialogHeader>
-                <DialogTitle>Add New Client</DialogTitle>
-                <DialogDescription>
-                  Enter the client's details below to create a new client record.
-                </DialogDescription>
-              </DialogHeader>
-              <div className="grid gap-4 py-4">
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="name" className="text-right">Name</Label>
-                  <Input id="name" placeholder="Company name" className="col-span-3" required />
-                </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="email" className="text-right">Email</Label>
-                  <Input id="email" placeholder="contact@example.com" type="email" className="col-span-3" required />
-                </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="phone" className="text-right">Phone</Label>
-                  <Input id="phone" placeholder="(555) 123-4567" className="col-span-3" />
-                </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="address" className="text-right">Address</Label>
-                  <Input id="address" placeholder="Street address" className="col-span-3" />
-                </div>
-              </div>
-              <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
-                  Cancel
-                </Button>
-                <Button type="submit">Save Client</Button>
-              </DialogFooter>
-            </form>
-          </DialogContent>
-        </Dialog>
+        <Button onClick={handleAddClient}>
+          <Plus className="mr-2 h-4 w-4" />
+          Add Client
+        </Button>
       </div>
 
       <Card>
@@ -155,19 +132,31 @@ export default function Clients() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredClients.map((client) => (
-                  <TableRow key={client.id}>
-                    <TableCell className="font-medium">{client.name}</TableCell>
-                    <TableCell>{client.email}</TableCell>
-                    <TableCell className="hidden md:table-cell">{client.phone}</TableCell>
-                    <TableCell className="hidden md:table-cell">{client.jobs}</TableCell>
-                    <TableCell>{getStatusBadge(client.status)}</TableCell>
-                    <TableCell className="text-right">
-                      <Button variant="outline" size="sm">View</Button>
+                {isLoading ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="h-24 text-center">
+                      Loading clients...
                     </TableCell>
                   </TableRow>
-                ))}
-                {filteredClients.length === 0 && (
+                ) : filteredClients.length > 0 ? (
+                  filteredClients.map((client) => (
+                    <TableRow key={client.id}>
+                      <TableCell className="font-medium">{client.name}</TableCell>
+                      <TableCell>{client.email}</TableCell>
+                      <TableCell className="hidden md:table-cell">{client.phone}</TableCell>
+                      <TableCell className="hidden md:table-cell">
+                        {/* TODO: Add actual job count */}
+                        {Math.floor(Math.random() * 5)}
+                      </TableCell>
+                      <TableCell>{getStatusBadge(client)}</TableCell>
+                      <TableCell className="text-right">
+                        <Button variant="outline" size="sm" onClick={() => handleEditClient(client)}>
+                          View
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : (
                   <TableRow>
                     <TableCell colSpan={6} className="h-24 text-center">
                       No clients found
@@ -179,6 +168,13 @@ export default function Clients() {
           </div>
         </CardContent>
       </Card>
+
+      <ClientFormDialog
+        isOpen={isClientFormOpen}
+        onClose={() => setIsClientFormOpen(false)}
+        initialData={selectedClient}
+        onSuccess={fetchClients}
+      />
     </div>
   );
 }
