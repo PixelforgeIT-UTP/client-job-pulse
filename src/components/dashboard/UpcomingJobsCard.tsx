@@ -38,14 +38,15 @@ export default function UpcomingJobsCard() {
         to: endOfWeek.toISOString(),
       });
 
-      const { data, error } = await supabase
-        .from("jobs")
-        .select("*")
-        .eq("status", "scheduled")
-        .gte("scheduled_time", today.toISOString())
-        .lte("scheduled_time", endOfWeek.toISOString())
-        .order("scheduled_time", { ascending: true })
-        .limit(5);
+const { data, error } = await supabase
+  .from("jobs")
+  .select("*")
+  .filter("status", "eq", "scheduled")
+  .filter("scheduled_time", "gte", today.toISOString())
+  .filter("scheduled_time", "lte", endOfWeek.toISOString())
+  .order("scheduled_time", { ascending: true })
+  .limit(5);
+
 
       if (error) {
         console.error("Error fetching jobs:", error);
