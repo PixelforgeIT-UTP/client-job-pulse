@@ -127,7 +127,13 @@ export default function Quotes() {
                       </TableCell>
                       <TableCell>{getStatusBadge(quote.status)}</TableCell>
                       <TableCell className="text-right">
-                        <Button variant="outline" size="sm">View</Button>
+                        <Button
+  variant="outline"
+  size="sm"
+  onClick={() => navigate(`/quotes/${quote.id}`)}
+>
+  View
+</Button>
                       </TableCell>
                     </TableRow>
                   ))
