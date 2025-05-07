@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -242,7 +241,6 @@ export default function Jobs() {
           isOpen={isPhotosDialogOpen}
           onClose={() => setIsPhotosDialogOpen(false)}
           jobId={selectedJob.id}
-          jobTitle={selectedJob.title}
         />
       )}
     </div>

@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface ClientFormDialogProps {
   isOpen: boolean;
@@ -19,6 +20,7 @@ interface ClientFormDialogProps {
 export function ClientFormDialog({ isOpen, onClose, onSuccess, initialData }: ClientFormDialogProps) {
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { user } = useAuth();
 
   const form = useForm({
     defaultValues: {
@@ -30,6 +32,15 @@ export function ClientFormDialog({ isOpen, onClose, onSuccess, initialData }: Cl
   });
 
   async function onSubmit(data: any) {
+    if (!user) {
+      toast({
+        title: "Authentication required",
+        description: "You must be logged in to create or edit clients.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       if (initialData?.id) {
@@ -41,10 +52,13 @@ export function ClientFormDialog({ isOpen, onClose, onSuccess, initialData }: Cl
 
         if (error) throw error;
       } else {
-        // Create new client
+        // Create new client with user_id set to the current user's ID
         const { error } = await supabase
           .from("clients")
-          .insert(data);
+          .insert({
+            ...data,
+            user_id: user.id
+          });
 
         if (error) throw error;
       }
