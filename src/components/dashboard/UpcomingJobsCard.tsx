@@ -20,18 +20,33 @@ export default function UpcomingJobsCard() {
   useEffect(() => {
     const fetchJobs = async () => {
       setLoading(true);
+
+      const now = new Date();
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+      // Calculate end of this business week (Friday, 11:59:59 PM)
+      const currentDay = today.getDay(); // Sunday = 0 ... Saturday = 6
+      const daysUntilFriday = currentDay <= 5 ? 5 - currentDay : 0;
+
+      const endOfWeek = new Date(today);
+      endOfWeek.setDate(today.getDate() + daysUntilFriday);
+      endOfWeek.setHours(23, 59, 59, 999);
+
       const { data, error } = await supabase
         .from("jobs")
         .select("*")
         .eq("status", "scheduled")
+        .gte("scheduled_time", today.toISOString())
+        .lte("scheduled_time", endOfWeek.toISOString())
         .order("scheduled_time", { ascending: true })
-        .limit(3);
+        .limit(5);
 
       if (error) {
         console.error("Error fetching jobs:", error);
       } else {
         setJobs(data || []);
       }
+
       setLoading(false);
     };
 
@@ -53,7 +68,7 @@ export default function UpcomingJobsCard() {
     <Card>
       <CardHeader className="pb-3">
         <CardTitle>Upcoming Jobs</CardTitle>
-        <CardDescription>Your scheduled jobs for the next few days</CardDescription>
+        <CardDescription>Your scheduled jobs for the next business week</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         {loading ? (
@@ -65,7 +80,9 @@ export default function UpcomingJobsCard() {
                 <CalendarIcon className="h-5 w-5 text-primary" />
               </div>
               <div className="space-y-1">
-                <Link to="/jobs" className="font-medium hover:underline">{job.title || job.job_description}</Link>
+                <Link to="/jobs" className="font-medium hover:underline">
+                  {job.title || job.job_description}
+                </Link>
                 <div className="text-sm text-muted-foreground">{job.client_name}</div>
                 <div className="flex items-center text-xs text-muted-foreground">
                   <span>{formatDateTime(job.scheduled_time)}</span>
