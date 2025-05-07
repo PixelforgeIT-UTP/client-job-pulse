@@ -42,9 +42,9 @@ const { data, error } = await supabase
   .from("jobs")
   .select("*")
   .filter("status", "eq", "scheduled")
-  .filter("scheduled_time", "gte", today.toISOString())
-  .filter("scheduled_time", "lte", endOfWeek.toISOString())
-  .order("scheduled_time", { ascending: true })
+  .filter("scheduled_at", "gte", today.toISOString())
+  .filter("scheduled_at", "lte", endOfWeek.toISOString())
+  .order("scheduled_at", { ascending: true })
   .limit(5);
 
 
@@ -88,11 +88,11 @@ const { data, error } = await supabase
               </div>
               <div className="space-y-1">
                 <Link to="/jobs" className="font-medium hover:underline">
-                  {job.title || job.job_description}
+                  {job.title || job.description}
                 </Link>
-                <div className="text-sm text-muted-foreground">{job.client_name}</div>
+                <div className="text-sm text-muted-foreground">{job.client_id}</div>
                 <div className="flex items-center text-xs text-muted-foreground">
-                  <span>{formatDateTime(job.scheduled_time)}</span>
+                  <span>{formatDateTime(job.scheduled_at)}</span>
                   <Badge variant="outline" className="ml-2 text-xs">Scheduled</Badge>
                 </div>
               </div>
