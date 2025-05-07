@@ -1,5 +1,5 @@
-
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { supabase } from '@/lib/supabaseClient';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -20,22 +20,33 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Plus, Search } from 'lucide-react';
 
-// Mock quote data
-const quotes = [
-  { id: 1, client: "Acme Corporation", job: "Kitchen Renovation", amount: "$5,200", date: "May 15, 2025", status: "pending" },
-  { id: 2, client: "Globex Industries", job: "Electrical Inspection", amount: "$750", date: "May 18, 2025", status: "approved" },
-  { id: 3, client: "Wayne Enterprises", job: "Plumbing Repair", amount: "$1,200", date: "May 20, 2025", status: "pending" },
-  { id: 4, client: "Stark Industries", job: "HVAC Installation", amount: "$3,800", date: "May 22, 2025", status: "rejected" },
-  { id: 5, client: "Umbrella Corporation", job: "Office Remodel", amount: "$12,500", date: "May 25, 2025", status: "approved" },
-];
-
 export default function Quotes() {
   const [searchTerm, setSearchTerm] = useState('');
+  const [quotes, setQuotes] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // Filter quotes based on search term
-  const filteredQuotes = quotes.filter(quote => 
-    quote.client.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    quote.job.toLowerCase().includes(searchTerm.toLowerCase())
+  useEffect(() => {
+    const fetchQuotes = async () => {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('quotes')
+        .select('*')
+        .order('date', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching quotes:', error);
+      } else {
+        setQuotes(data || []);
+      }
+      setLoading(false);
+    };
+
+    fetchQuotes();
+  }, []);
+
+  const filteredQuotes = quotes.filter((quote) =>
+    quote.client_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    quote.job_description?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const getStatusBadge = (status: string) => {
@@ -97,19 +108,28 @@ export default function Quotes() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredQuotes.map((quote) => (
-                  <TableRow key={quote.id}>
-                    <TableCell className="font-medium">{quote.client}</TableCell>
-                    <TableCell>{quote.job}</TableCell>
-                    <TableCell>{quote.amount}</TableCell>
-                    <TableCell className="hidden md:table-cell">{quote.date}</TableCell>
-                    <TableCell>{getStatusBadge(quote.status)}</TableCell>
-                    <TableCell className="text-right">
-                      <Button variant="outline" size="sm">View</Button>
+                {loading ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="h-24 text-center">
+                      Loading...
                     </TableCell>
                   </TableRow>
-                ))}
-                {filteredQuotes.length === 0 && (
+                ) : filteredQuotes.length > 0 ? (
+                  filteredQuotes.map((quote) => (
+                    <TableRow key={quote.id}>
+                      <TableCell className="font-medium">{quote.client_name}</TableCell>
+                      <TableCell>{quote.job_description}</TableCell>
+                      <TableCell>${quote.amount}</TableCell>
+                      <TableCell className="hidden md:table-cell">
+                        {new Date(quote.date).toLocaleDateString()}
+                      </TableCell>
+                      <TableCell>{getStatusBadge(quote.status)}</TableCell>
+                      <TableCell className="text-right">
+                        <Button variant="outline" size="sm">View</Button>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : (
                   <TableRow>
                     <TableCell colSpan={6} className="h-24 text-center">
                       No quotes found
