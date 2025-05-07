@@ -22,15 +22,21 @@ export default function UpcomingJobsCard() {
       setLoading(true);
 
       const now = new Date();
-      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const today = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
 
-      // Calculate end of this business week (Friday, 11:59:59 PM)
-      const currentDay = today.getDay(); // Sunday = 0 ... Saturday = 6
+      // Get end of business week: Friday 11:59:59 PM UTC
+      const currentDay = today.getUTCDay(); // Sunday = 0 ... Saturday = 6
       const daysUntilFriday = currentDay <= 5 ? 5 - currentDay : 0;
 
       const endOfWeek = new Date(today);
-      endOfWeek.setDate(today.getDate() + daysUntilFriday);
-      endOfWeek.setHours(23, 59, 59, 999);
+      endOfWeek.setUTCDate(today.getUTCDate() + daysUntilFriday);
+      endOfWeek.setUTCHours(23, 59, 59, 999);
+
+      // Debug: View actual range
+      console.log("Fetching jobs between:", {
+        from: today.toISOString(),
+        to: endOfWeek.toISOString(),
+      });
 
       const { data, error } = await supabase
         .from("jobs")
