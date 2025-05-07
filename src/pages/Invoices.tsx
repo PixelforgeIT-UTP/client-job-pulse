@@ -1,5 +1,5 @@
-
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { supabase } from '@/lib/supabaseClient';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -20,23 +20,55 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Plus, Search } from 'lucide-react';
 
-// Mock invoice data
-const invoices = [
-  { id: 1, client: "Acme Corporation", job: "Kitchen Renovation", amount: "$5,200", dueDate: "June 15, 2025", status: "paid" },
-  { id: 2, client: "Globex Industries", job: "Electrical Inspection", amount: "$750", dueDate: "June 18, 2025", status: "pending" },
-  { id: 3, client: "Wayne Enterprises", job: "Plumbing Repair", amount: "$1,200", dueDate: "June 20, 2025", status: "overdue" },
-  { id: 4, client: "Stark Industries", job: "HVAC Installation", amount: "$3,800", dueDate: "June 22, 2025", status: "pending" },
-  { id: 5, client: "Umbrella Corporation", job: "Office Remodel", amount: "$12,500", dueDate: "June 25, 2025", status: "paid" },
-];
-
 export default function Invoices() {
   const [searchTerm, setSearchTerm] = useState('');
+  const [invoices, setInvoices] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // Filter invoices based on search term
-  const filteredInvoices = invoices.filter(invoice => 
-    invoice.client.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    invoice.job.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  useEffect(() => {
+    const fetchInvoices = async () => {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('invoices')
+        .select(`
+          id,
+          amount,
+          paid,
+          due_date,
+          jobs (
+            client_name,
+            job_description
+          )
+        `)
+        .order('due_date', { ascending: true });
+
+      if (error) {
+        console.error('Error fetching invoices:', error);
+      } else {
+        setInvoices(data || []);
+      }
+
+      setLoading(false);
+    };
+
+    fetchInvoices();
+  }, []);
+
+  const filteredInvoices = invoices.filter(invoice => {
+    const client = invoice.jobs?.client_name || '';
+    const job = invoice.jobs?.job_description || '';
+    return (
+      client.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      job.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  });
+
+  const getStatusFromInvoice = (invoice: any) => {
+    if (invoice.paid) return 'paid';
+    const dueDate = new Date(invoice.due_date);
+    const today = new Date();
+    return dueDate < today ? 'overdue' : 'pending';
+  };
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -97,19 +129,32 @@ export default function Invoices() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredInvoices.map((invoice) => (
-                  <TableRow key={invoice.id}>
-                    <TableCell className="font-medium">{invoice.client}</TableCell>
-                    <TableCell>{invoice.job}</TableCell>
-                    <TableCell>{invoice.amount}</TableCell>
-                    <TableCell className="hidden md:table-cell">{invoice.dueDate}</TableCell>
-                    <TableCell>{getStatusBadge(invoice.status)}</TableCell>
-                    <TableCell className="text-right">
-                      <Button variant="outline" size="sm">View</Button>
+                {loading ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="h-24 text-center">
+                      Loading...
                     </TableCell>
                   </TableRow>
-                ))}
-                {filteredInvoices.length === 0 && (
+                ) : filteredInvoices.length > 0 ? (
+                  filteredInvoices.map((invoice) => (
+                    <TableRow key={invoice.id}>
+                      <TableCell className="font-medium">
+                        {invoice.jobs?.client_name || '—'}
+                      </TableCell>
+                      <TableCell>{invoice.jobs?.job_description || '—'}</TableCell>
+                      <TableCell>${Number(invoice.amount).toLocaleString()}</TableCell>
+                      <TableCell className="hidden md:table-cell">
+                        {new Date(invoice.due_date).toLocaleDateString()}
+                      </TableCell>
+                      <TableCell>
+                        {getStatusBadge(getStatusFromInvoice(invoice))}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button variant="outline" size="sm">View</Button>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : (
                   <TableRow>
                     <TableCell colSpan={6} className="h-24 text-center">
                       No invoices found
