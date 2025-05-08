@@ -19,7 +19,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { CalendarIcon, Clock, DollarSign, MapPin, Image, Plus } from "lucide-react";
+import { CalendarIcon, Clock, DollarSign, Image, Plus } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -77,9 +77,10 @@ export function JobFormDialog({ isOpen, onClose, onSuccess, initialData }: JobFo
   }, [initialData]);
 
   useEffect(() => {
-    if (!geocoderRef.current) return;
+    if (!isOpen || !geocoderRef.current) return;
+
     const geocoder = new MapboxGeocoder({
-      accessToken: mapboxgl.accessToken,
+      accessToken: mapboxgl.accessToken!,
       types: "address",
       placeholder: "Enter a full address",
       marker: false,
@@ -98,7 +99,7 @@ export function JobFormDialog({ isOpen, onClose, onSuccess, initialData }: JobFo
     });
 
     return () => geocoder.clear();
-  }, []);
+  }, [isOpen]);
 
   useEffect(() => {
     if (!coordinates) return;
@@ -130,7 +131,7 @@ export function JobFormDialog({ isOpen, onClose, onSuccess, initialData }: JobFo
     try {
       const scheduledDateTime = date ? new Date(date) : new Date();
       if (data.scheduled_time) {
-        const [hours, minutes] = data.scheduled_time.split(":" ).map(Number);
+        const [hours, minutes] = data.scheduled_time.split(":").map(Number);
         scheduledDateTime.setHours(hours, minutes);
       }
 
@@ -240,10 +241,14 @@ export function JobFormDialog({ isOpen, onClose, onSuccess, initialData }: JobFo
             <FormItem>
               <FormLabel>Location*</FormLabel>
               <FormControl>
-                <div ref={geocoderRef} className="w-full" />
+                <div
+                  ref={geocoderRef}
+                  className="w-full min-h-[50px] border border-muted rounded-md px-2 py-1"
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
+
             {coordinates && (
               <div className="h-64 w-full mt-4 rounded-md overflow-hidden">
                 <div id="map" className="w-full h-full" />
@@ -277,7 +282,9 @@ export function JobFormDialog({ isOpen, onClose, onSuccess, initialData }: JobFo
                 <Popover>
                   <PopoverTrigger asChild>
                     <FormControl>
-                      <Button variant="outline" className={cn("w-full pl-3 text-left font-normal", !date && "text-muted-foreground")}>{date ? format(date, "PPP") : <span>Pick a date</span>}</Button>
+                      <Button variant="outline" className={cn("w-full pl-3 text-left font-normal", !date && "text-muted-foreground")}>
+                        {date ? format(date, "PPP") : <span>Pick a date</span>}
+                      </Button>
                     </FormControl>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">
@@ -324,6 +331,7 @@ export function JobFormDialog({ isOpen, onClose, onSuccess, initialData }: JobFo
                   </div>
                 </label>
               </FormControl>
+
               {imagePreviewUrls.length > 0 && (
                 <div className="mt-4">
                   <h4 className="text-sm font-medium mb-2">New Photos</h4>
@@ -337,6 +345,7 @@ export function JobFormDialog({ isOpen, onClose, onSuccess, initialData }: JobFo
                   </div>
                 </div>
               )}
+
               {existingPhotos.length > 0 && initialData?.id && (
                 <div className="mt-4">
                   <h4 className="text-sm font-medium mb-2">Existing Photos</h4>
