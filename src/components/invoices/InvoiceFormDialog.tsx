@@ -203,8 +203,8 @@ export function InvoiceFormDialog({
             const isCustom = item.description === 'Custom Service';
 
             return (
-              <div key={idx} className="grid grid-cols-1 md:grid-cols-5 gap-3 items-end">
-                <div>
+              <div key={idx} className="grid grid-cols-1 md:grid-cols-6 gap-3 items-end">
+                <div className="md:col-span-2">
                   <label className="text-xs mb-1 block">Service</label>
                   <select
                     className="w-full border p-2 text-sm"
