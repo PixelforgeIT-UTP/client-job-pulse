@@ -64,3 +64,7 @@
     color: #cbd5e1;
   }
 }
+.mapboxgl-ctrl-geocoder {
+  width: 100% !important;
+}
+

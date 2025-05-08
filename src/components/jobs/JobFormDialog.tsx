@@ -1,19 +1,35 @@
-import { useState, useEffect } from "react";
-import { useForm } from "react-hook-form";
-import { CalendarIcon, Clock, DollarSign, MapPin, Image, Plus } from "lucide-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
+import { useState, useEffect, useRef } from "react";
+import { useForm, FormProvider } from "react-hook-form";
+import mapboxgl from "mapbox-gl";
+import MapboxGeocoder from "@mapbox/mapbox-gl-geocoder";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  FormField,
+  FormItem,
+  FormLabel,
+  FormControl,
+  FormMessage,
+} from "@/components/ui/form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { CalendarIcon, Clock, DollarSign, MapPin, Image, Plus } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/lib/supabaseClient";
 import { useToast } from "@/hooks/use-toast";
 import { ClientSelector } from "./ClientSelector";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+
+mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN!;
 
 interface JobFormDialogProps {
   isOpen: boolean;
@@ -24,15 +40,6 @@ interface JobFormDialogProps {
 
 export function JobFormDialog({ isOpen, onClose, onSuccess, initialData }: JobFormDialogProps) {
   const { toast } = useToast();
-  const [date, setDate] = useState<Date | undefined>(
-    initialData?.scheduled_at ? new Date(initialData.scheduled_at) : undefined
-  );
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [images, setImages] = useState<File[]>([]);
-  const [imagePreviewUrls, setImagePreviewUrls] = useState<string[]>([]);
-  const [existingPhotos, setExistingPhotos] = useState<any[]>([]);
-  const [userId, setUserId] = useState<string | null>(null);
-
   const form = useForm({
     defaultValues: {
       title: initialData?.title || "",
@@ -45,12 +52,23 @@ export function JobFormDialog({ isOpen, onClose, onSuccess, initialData }: JobFo
     },
   });
 
+  const [date, setDate] = useState<Date | undefined>(
+    initialData?.scheduled_at ? new Date(initialData.scheduled_at) : undefined
+  );
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [images, setImages] = useState<File[]>([]);
+  const [imagePreviewUrls, setImagePreviewUrls] = useState<string[]>([]);
+  const [existingPhotos, setExistingPhotos] = useState<any[]>([]);
+  const [userId, setUserId] = useState<string | null>(null);
+  const [coordinates, setCoordinates] = useState<[number, number] | null>(null);
+  const geocoderRef = useRef<HTMLDivElement | null>(null);
+  const mapRef = useRef<mapboxgl.Map | null>(null);
+
   useEffect(() => {
     const fetchUser = async () => {
       const { data } = await supabase.auth.getUser();
       setUserId(data?.user?.id || null);
     };
-
     fetchUser();
 
     if (initialData?.id) {
@@ -58,13 +76,50 @@ export function JobFormDialog({ isOpen, onClose, onSuccess, initialData }: JobFo
     }
   }, [initialData]);
 
+  useEffect(() => {
+    if (!geocoderRef.current) return;
+    const geocoder = new MapboxGeocoder({
+      accessToken: mapboxgl.accessToken,
+      types: "address",
+      placeholder: "Enter a full address",
+      marker: false,
+    });
+
+    geocoderRef.current.innerHTML = "";
+    geocoder.addTo(geocoderRef.current);
+
+    geocoder.on("result", (e) => {
+      const place = e.result;
+      form.setValue("location", place.place_name);
+      if (place.geometry) {
+        const [lng, lat] = place.geometry.coordinates;
+        setCoordinates([lat, lng]);
+      }
+    });
+
+    return () => geocoder.clear();
+  }, []);
+
+  useEffect(() => {
+    if (!coordinates) return;
+    if (mapRef.current) mapRef.current.remove();
+
+    const map = new mapboxgl.Map({
+      container: "map",
+      style: "mapbox://styles/mapbox/streets-v11",
+      center: [coordinates[1], coordinates[0]],
+      zoom: 14,
+    });
+
+    new mapboxgl.Marker().setLngLat([coordinates[1], coordinates[0]]).addTo(map);
+    mapRef.current = map;
+  }, [coordinates]);
+
   async function fetchJobPhotos(jobId: string) {
     try {
       const { data, error } = await supabase.storage.from("job-photos").list(jobId);
       if (error) throw error;
-
-      const photos = data.filter((item) => !item.name.endsWith("/"));
-      setExistingPhotos(photos);
+      setExistingPhotos(data.filter((item) => !item.name.endsWith("/")));
     } catch (error) {
       console.error("Error fetching job photos:", error);
     }
@@ -75,72 +130,51 @@ export function JobFormDialog({ isOpen, onClose, onSuccess, initialData }: JobFo
     try {
       const scheduledDateTime = date ? new Date(date) : new Date();
       if (data.scheduled_time) {
-        const [hours, minutes] = data.scheduled_time.split(":").map(Number);
+        const [hours, minutes] = data.scheduled_time.split(":" ).map(Number);
         scheduledDateTime.setHours(hours, minutes);
       }
 
       const jobData = {
-        title: data.title,
-        client_id: data.client_id,
-        description: data.description,
-        location: data.location,
+        ...data,
         cost: data.cost ? parseFloat(data.cost) : null,
-        duration: data.duration,
         scheduled_at: scheduledDateTime.toISOString(),
         status: initialData?.status || "scheduled",
         created_by: userId,
+        lat: coordinates?.[0] || null,
+        lng: coordinates?.[1] || null,
       };
 
       let jobId = initialData?.id;
 
-      if (initialData?.id) {
-        const { error } = await supabase.from("jobs").update(jobData).eq("id", initialData.id);
+      if (jobId) {
+        const { error } = await supabase.from("jobs").update(jobData).eq("id", jobId);
         if (error) throw error;
       } else {
-        const { data: jobResult, error } = await supabase
-          .from("jobs")
-          .insert(jobData)
-          .select("id")
-          .maybeSingle();
-
+        const { data: jobResult, error } = await supabase.from("jobs").insert(jobData).select("id").maybeSingle();
         if (error) throw error;
         if (!jobResult) throw new Error("Job creation failed: no ID returned.");
-
         jobId = jobResult.id;
       }
 
       if (images.length > 0 && jobId) {
         for (const image of images) {
           const fileName = `${jobId}/${Date.now()}_${image.name}`;
-          const { error: uploadError } = await supabase.storage
-            .from("job-photos")
-            .upload(fileName, image);
-
+          const { error: uploadError } = await supabase.storage.from("job-photos").upload(fileName, image);
           if (uploadError) {
-            toast({
-              title: "Warning",
-              description: `Failed to upload ${image.name}`,
-              variant: "destructive",
-            });
+            toast({ title: "Warning", description: `Failed to upload ${image.name}`, variant: "destructive" });
           }
         }
       }
 
       toast({
         title: initialData ? "Job updated" : "Job created",
-        description: initialData
-          ? "Your job has been updated successfully."
-          : "Your job has been created successfully.",
+        description: initialData ? "Your job has been updated." : "Your job has been created.",
       });
 
       if (onSuccess) onSuccess();
       onClose();
     } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error?.message || "An error occurred",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: error.message || "An error occurred", variant: "destructive" });
     } finally {
       setIsSubmitting(false);
     }
@@ -150,8 +184,7 @@ export function JobFormDialog({ isOpen, onClose, onSuccess, initialData }: JobFo
     if (e.target.files && e.target.files.length > 0) {
       const selectedFiles = Array.from(e.target.files);
       setImages(selectedFiles);
-      const previews = selectedFiles.map((file) => URL.createObjectURL(file));
-      setImagePreviewUrls(previews);
+      setImagePreviewUrls(selectedFiles.map((file) => URL.createObjectURL(file)));
     }
   }
 
@@ -166,7 +199,7 @@ export function JobFormDialog({ isOpen, onClose, onSuccess, initialData }: JobFo
           <DialogTitle>{initialData ? "Edit Job" : "Create New Job"}</DialogTitle>
         </DialogHeader>
 
-        <Form {...form}>
+        <FormProvider {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <FormField
               control={form.control}
@@ -174,9 +207,7 @@ export function JobFormDialog({ isOpen, onClose, onSuccess, initialData }: JobFo
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Job Title*</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Enter job title" {...field} />
-                  </FormControl>
+                  <FormControl><Input placeholder="Enter job title" {...field} /></FormControl>
                   <FormMessage />
                 </FormItem>
               )}
@@ -188,9 +219,7 @@ export function JobFormDialog({ isOpen, onClose, onSuccess, initialData }: JobFo
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Client*</FormLabel>
-                  <FormControl>
-                    <ClientSelector value={field.value} onChange={field.onChange} />
-                  </FormControl>
+                  <FormControl><ClientSelector value={field.value} onChange={field.onChange} /></FormControl>
                   <FormMessage />
                 </FormItem>
               )}
@@ -202,48 +231,40 @@ export function JobFormDialog({ isOpen, onClose, onSuccess, initialData }: JobFo
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Description</FormLabel>
-                  <FormControl>
-                    <Textarea placeholder="Enter job description" {...field} />
-                  </FormControl>
+                  <FormControl><Textarea placeholder="Enter job description" {...field} /></FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
+
+            <FormItem>
+              <FormLabel>Location*</FormLabel>
+              <FormControl>
+                <div ref={geocoderRef} className="w-full" />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+            {coordinates && (
+              <div className="h-64 w-full mt-4 rounded-md overflow-hidden">
+                <div id="map" className="w-full h-full" />
+              </div>
+            )}
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField
                 control={form.control}
                 name="location"
                 render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>
-                      <div className="flex items-center">
-                        <MapPin className="mr-2 h-4 w-4" />
-                        Location
-                      </div>
-                    </FormLabel>
-                    <FormControl>
-                      <Input placeholder="Enter job location" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
+                  <FormItem className="hidden"><FormControl><Input readOnly {...field} /></FormControl></FormItem>
                 )}
               />
-
               <FormField
                 control={form.control}
                 name="cost"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>
-                      <div className="flex items-center">
-                        <DollarSign className="mr-2 h-4 w-4" />
-                        Cost
-                      </div>
-                    </FormLabel>
-                    <FormControl>
-                      <Input type="number" placeholder="Enter job cost" {...field} />
-                    </FormControl>
+                    <FormLabel><DollarSign className="mr-2 h-4 w-4" /> Cost</FormLabel>
+                    <FormControl><Input type="number" placeholder="Enter job cost" {...field} /></FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -251,22 +272,12 @@ export function JobFormDialog({ isOpen, onClose, onSuccess, initialData }: JobFo
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormItem className="flex flex-col">
-                <FormLabel>
-                  <div className="flex items-center">
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    Date
-                  </div>
-                </FormLabel>
+              <FormItem>
+                <FormLabel><CalendarIcon className="mr-2 h-4 w-4" /> Date</FormLabel>
                 <Popover>
                   <PopoverTrigger asChild>
                     <FormControl>
-                      <Button
-                        variant="outline"
-                        className={cn("w-full pl-3 text-left font-normal", !date && "text-muted-foreground")}
-                      >
-                        {date ? format(date, "PPP") : <span>Pick a date</span>}
-                      </Button>
+                      <Button variant="outline" className={cn("w-full pl-3 text-left font-normal", !date && "text-muted-foreground")}>{date ? format(date, "PPP") : <span>Pick a date</span>}</Button>
                     </FormControl>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">
@@ -280,15 +291,8 @@ export function JobFormDialog({ isOpen, onClose, onSuccess, initialData }: JobFo
                 name="scheduled_time"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>
-                      <div className="flex items-center">
-                        <Clock className="mr-2 h-4 w-4" />
-                        Time
-                      </div>
-                    </FormLabel>
-                    <FormControl>
-                      <Input type="time" {...field} />
-                    </FormControl>
+                    <FormLabel><Clock className="mr-2 h-4 w-4" /> Time</FormLabel>
+                    <FormControl><Input type="time" {...field} /></FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -300,85 +304,61 @@ export function JobFormDialog({ isOpen, onClose, onSuccess, initialData }: JobFo
               name="duration"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>
-                    <div className="flex items-center">
-                      <Clock className="mr-2 h-4 w-4" />
-                      Duration (hours)
-                    </div>
-                  </FormLabel>
-                  <FormControl>
-                    <Input type="text" placeholder="e.g. 2, 2.5" {...field} />
-                  </FormControl>
+                  <FormLabel><Clock className="mr-2 h-4 w-4" /> Duration (hours)</FormLabel>
+                  <FormControl><Input placeholder="e.g. 2, 2.5" {...field} /></FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
 
             <FormItem>
-              <FormLabel>
-                <div className="flex items-center">
-                  <Image className="mr-2 h-4 w-4" />
-                  Photos
+              <FormLabel><Image className="mr-2 h-4 w-4" /> Photos</FormLabel>
+              <FormControl>
+                <label className="cursor-pointer">
+                  <div className="flex items-center justify-center border-2 border-dashed border-gray-300 rounded-md p-6 hover:border-primary">
+                    <div className="text-center">
+                      <Plus className="mx-auto h-6 w-6 text-muted-foreground" />
+                      <span className="mt-2 block text-sm font-medium text-muted-foreground">Add photos</span>
+                    </div>
+                    <Input type="file" accept="image/*" multiple onChange={handleImageChange} className="hidden" />
+                  </div>
+                </label>
+              </FormControl>
+              {imagePreviewUrls.length > 0 && (
+                <div className="mt-4">
+                  <h4 className="text-sm font-medium mb-2">New Photos</h4>
+                  <div className="grid grid-cols-4 gap-2">
+                    {imagePreviewUrls.map((url, index) => (
+                      <Avatar key={index} className="h-16 w-16 rounded-md">
+                        <AvatarImage src={url} alt={`Preview ${index}`} className="object-cover" />
+                        <AvatarFallback className="rounded-md">IMG</AvatarFallback>
+                      </Avatar>
+                    ))}
+                  </div>
                 </div>
-              </FormLabel>
-              <div className="space-y-3">
-                <FormControl>
-                  <label className="cursor-pointer">
-                    <div className="flex items-center justify-center border-2 border-dashed border-gray-300 rounded-md p-6 hover:border-primary">
-                      <div className="text-center">
-                        <Plus className="mx-auto h-6 w-6 text-muted-foreground" />
-                        <span className="mt-2 block text-sm font-medium text-muted-foreground">Add photos</span>
-                      </div>
-                      <Input type="file" accept="image/*" multiple onChange={handleImageChange} className="hidden" />
-                    </div>
-                  </label>
-                </FormControl>
-
-                {imagePreviewUrls.length > 0 && (
-                  <div className="mt-4">
-                    <h4 className="text-sm font-medium mb-2">New Photos</h4>
-                    <div className="grid grid-cols-4 gap-2">
-                      {imagePreviewUrls.map((url, index) => (
-                        <Avatar key={index} className="h-16 w-16 rounded-md">
-                          <AvatarImage src={url} alt={`Preview ${index}`} className="object-cover" />
-                          <AvatarFallback className="rounded-md">IMG</AvatarFallback>
-                        </Avatar>
-                      ))}
-                    </div>
+              )}
+              {existingPhotos.length > 0 && initialData?.id && (
+                <div className="mt-4">
+                  <h4 className="text-sm font-medium mb-2">Existing Photos</h4>
+                  <div className="grid grid-cols-4 gap-2">
+                    {existingPhotos.map((photo, index) => (
+                      <Avatar key={index} className="h-16 w-16 rounded-md">
+                        <AvatarImage src={getPhotoUrl(initialData.id, photo.name)} alt={`Job Photo ${index}`} className="object-cover" />
+                        <AvatarFallback className="rounded-md">IMG</AvatarFallback>
+                      </Avatar>
+                    ))}
                   </div>
-                )}
-
-                {existingPhotos.length > 0 && initialData?.id && (
-                  <div className="mt-4">
-                    <h4 className="text-sm font-medium mb-2">Existing Photos</h4>
-                    <div className="grid grid-cols-4 gap-2">
-                      {existingPhotos.map((photo, index) => (
-                        <Avatar key={index} className="h-16 w-16 rounded-md">
-                          <AvatarImage
-                            src={getPhotoUrl(initialData.id, photo.name)}
-                            alt={`Job Photo ${index}`}
-                            className="object-cover"
-                          />
-                          <AvatarFallback className="rounded-md">IMG</AvatarFallback>
-                        </Avatar>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
+                </div>
+              )}
               <FormMessage />
             </FormItem>
 
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={onClose}>
-                Cancel
-              </Button>
-              <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? "Saving..." : initialData ? "Update Job" : "Create Job"}
-              </Button>
+              <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
+              <Button type="submit" disabled={isSubmitting}>{isSubmitting ? "Saving..." : initialData ? "Update Job" : "Create Job"}</Button>
             </DialogFooter>
           </form>
-        </Form>
+        </FormProvider>
       </DialogContent>
     </Dialog>
   );
