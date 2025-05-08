@@ -36,7 +36,7 @@ export default function Invoices() {
         amount,
         paid,
         due_date,
-        jobs (
+        job:jobs (
           client_name,
           job_description
         )
@@ -60,8 +60,8 @@ export default function Invoices() {
   }, []);
 
   const filteredInvoices = invoices.filter(invoice => {
-    const client = invoice.jobs?.client_name || '';
-    const job = invoice.jobs?.job_description || '';
+    const client = invoice.job?.client_name || '';
+    const job = invoice.job?.job_description || '';
     return (
       client.toLowerCase().includes(searchTerm.toLowerCase()) ||
       job.toLowerCase().includes(searchTerm.toLowerCase())
@@ -144,9 +144,9 @@ export default function Invoices() {
                   filteredInvoices.map((invoice) => (
                     <TableRow key={invoice.id}>
                       <TableCell className="font-medium">
-                        {invoice.jobs?.client_name || '—'}
+                        {invoice.job?.client_name || '—'}
                       </TableCell>
-                      <TableCell>{invoice.jobs?.job_description || '—'}</TableCell>
+                      <TableCell>{invoice.job?.job_description || '—'}</TableCell>
                       <TableCell>${Number(invoice.amount).toLocaleString()}</TableCell>
                       <TableCell className="hidden md:table-cell">
                         {new Date(invoice.due_date).toLocaleDateString()}
