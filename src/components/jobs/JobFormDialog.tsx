@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
-import { CalendarIcon, Clock, DollarSign, MapPin, Image, Plus } from "lucide-react";
+import { CalendarIcon, Clock, DollarSign, MapPin, Plus } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
 import { Button } from "@/components/ui/button";
@@ -13,7 +13,6 @@ import { cn } from "@/lib/utils";
 import { supabase } from "@/lib/supabaseClient";
 import { useToast } from "@/hooks/use-toast";
 import { ClientSelector } from "./ClientSelector";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 interface JobFormDialogProps {
   isOpen: boolean;
@@ -22,24 +21,33 @@ interface JobFormDialogProps {
   initialData?: any;
 }
 
+const predefinedServices = [
+  { label: "Raking", billingType: "flat", rate: 100 },
+  { label: "Needle", billingType: "flat", rate: 375 },
+  { label: "Trucks & Trailers on Site", billingType: "hourly", rate: 250 },
+  { label: "Bobcat on Site", billingType: "hourly", rate: 350 },
+  { label: "Roll off Bin", billingType: "flat", rate: 1500 },
+  { label: "Grass Cutting", billingType: "unit", rate: 2, unitLabel: "sq ft" },
+];
+
 export function JobFormDialog({ isOpen, onClose, onSuccess, initialData }: JobFormDialogProps) {
   const { toast } = useToast();
   const [date, setDate] = useState<Date | undefined>(
     initialData?.scheduled_at ? new Date(initialData.scheduled_at) : undefined
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [images, setImages] = useState<File[]>([]);
-  const [imagePreviewUrls, setImagePreviewUrls] = useState<string[]>([]);
-  const [existingPhotos, setExistingPhotos] = useState<any[]>([]);
   const [userId, setUserId] = useState<string | null>(null);
+
+  const [items, setItems] = useState([
+    { description: "", quantity: 1, unit_price: 0, billingType: "flat", rateLabel: "" },
+  ]);
 
   const form = useForm({
     defaultValues: {
       title: initialData?.title || "",
       client_id: initialData?.client_id || "",
-      description: initialData?.description || "",
+      notes: initialData?.notes || "",
       location: initialData?.location || "",
-      cost: initialData?.cost || "",
       scheduled_time: initialData?.scheduled_time || "",
       duration: initialData?.duration || "",
     },
@@ -50,25 +58,46 @@ export function JobFormDialog({ isOpen, onClose, onSuccess, initialData }: JobFo
       const { data } = await supabase.auth.getUser();
       setUserId(data?.user?.id || null);
     };
-
     fetchUser();
+  }, []);
 
-    if (initialData?.id) {
-      fetchJobPhotos(initialData.id);
+  const handleAddItem = () => {
+    setItems([...items, { description: "", quantity: 1, unit_price: 0, billingType: "flat", rateLabel: "" }]);
+  };
+
+  const handleItemChange = (index: number, field: string, value: any) => {
+    const updated = [...items];
+    updated[index][field] = field === "quantity" || field === "unit_price" ? Number(value) : value;
+    setItems(updated);
+  };
+
+  const handleServiceSelect = (index: number, label: string) => {
+    const updated = [...items];
+    if (label === "Custom Service") {
+      updated[index] = {
+        ...updated[index],
+        description: "Custom Service",
+        unit_price: 0,
+        billingType: "flat",
+        rateLabel: "",
+      };
+    } else {
+      const match = predefinedServices.find((s) => s.label === label);
+      if (match) {
+        updated[index] = {
+          ...updated[index],
+          description: match.label,
+          unit_price: match.rate,
+          billingType: match.billingType,
+          rateLabel: match.unitLabel || "",
+        };
+      }
     }
-  }, [initialData]);
+    setItems(updated);
+  };
 
-  async function fetchJobPhotos(jobId: string) {
-    try {
-      const { data, error } = await supabase.storage.from("job-photos").list(jobId);
-      if (error) throw error;
-
-      const photos = data.filter((item) => !item.name.endsWith("/"));
-      setExistingPhotos(photos);
-    } catch (error) {
-      console.error("Error fetching job photos:", error);
-    }
-  }
+  const calculateTotal = () =>
+    items.reduce((sum, item) => sum + item.quantity * item.unit_price, 0).toFixed(2);
 
   async function onSubmit(data: any) {
     setIsSubmitting(true);
@@ -82,10 +111,10 @@ export function JobFormDialog({ isOpen, onClose, onSuccess, initialData }: JobFo
       const jobData = {
         title: data.title,
         client_id: data.client_id,
-        description: data.description,
+        notes: data.notes,
         location: data.location,
-        cost: data.cost ? parseFloat(data.cost) : null,
         duration: data.duration,
+        cost: parseFloat(calculateTotal()),
         scheduled_at: scheduledDateTime.toISOString(),
         status: initialData?.status || "scheduled",
         created_by: userId,
@@ -93,38 +122,25 @@ export function JobFormDialog({ isOpen, onClose, onSuccess, initialData }: JobFo
 
       let jobId = initialData?.id;
 
-      if (initialData?.id) {
-        const { error } = await supabase.from("jobs").update(jobData).eq("id", initialData.id);
+      if (jobId) {
+        const { error } = await supabase.from("jobs").update(jobData).eq("id", jobId);
         if (error) throw error;
       } else {
-        const { data: jobResult, error } = await supabase
-          .from("jobs")
-          .insert(jobData)
-          .select("id")
-          .maybeSingle();
-
+        const { data: jobResult, error } = await supabase.from("jobs").insert(jobData).select("id").maybeSingle();
         if (error) throw error;
-        if (!jobResult) throw new Error("Job creation failed: no ID returned.");
-
+        if (!jobResult) throw new Error("Job creation failed.");
         jobId = jobResult.id;
       }
 
-      if (images.length > 0 && jobId) {
-        for (const image of images) {
-          const fileName = `${jobId}/${Date.now()}_${image.name}`;
-          const { error: uploadError } = await supabase.storage
-            .from("job-photos")
-            .upload(fileName, image);
+      const lineItems = items.map((item) => ({
+        job_id: jobId,
+        description: item.description,
+        quantity: item.quantity,
+        unit_price: item.unit_price,
+      }));
 
-          if (uploadError) {
-            toast({
-              title: "Warning",
-              description: `Failed to upload ${image.name}`,
-              variant: "destructive",
-            });
-          }
-        }
-      }
+      const { error: itemsError } = await supabase.from("job_items").insert(lineItems);
+      if (itemsError) throw itemsError;
 
       toast({
         title: initialData ? "Job updated" : "Job created",
@@ -146,22 +162,9 @@ export function JobFormDialog({ isOpen, onClose, onSuccess, initialData }: JobFo
     }
   }
 
-  function handleImageChange(e: React.ChangeEvent<HTMLInputElement>) {
-    if (e.target.files && e.target.files.length > 0) {
-      const selectedFiles = Array.from(e.target.files);
-      setImages(selectedFiles);
-      const previews = selectedFiles.map((file) => URL.createObjectURL(file));
-      setImagePreviewUrls(previews);
-    }
-  }
-
-  function getPhotoUrl(jobId: string, fileName: string) {
-    return `${supabase.storage.from("job-photos").getPublicUrl(`${jobId}/${fileName}`).data.publicUrl}`;
-  }
-
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{initialData ? "Edit Job" : "Create New Job"}</DialogTitle>
         </DialogHeader>
@@ -198,12 +201,12 @@ export function JobFormDialog({ isOpen, onClose, onSuccess, initialData }: JobFo
 
             <FormField
               control={form.control}
-              name="description"
+              name="notes"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Description</FormLabel>
+                  <FormLabel>Notes</FormLabel>
                   <FormControl>
-                    <Textarea placeholder="Enter job description" {...field} />
+                    <Textarea placeholder="Add internal job notes..." {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -217,10 +220,8 @@ export function JobFormDialog({ isOpen, onClose, onSuccess, initialData }: JobFo
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>
-                      <div className="flex items-center">
-                        <MapPin className="mr-2 h-4 w-4" />
-                        Location
-                      </div>
+                      <MapPin className="inline mr-2 h-4 w-4" />
+                      Location
                     </FormLabel>
                     <FormControl>
                       <Input placeholder="Enter job location" {...field} />
@@ -232,17 +233,15 @@ export function JobFormDialog({ isOpen, onClose, onSuccess, initialData }: JobFo
 
               <FormField
                 control={form.control}
-                name="cost"
+                name="duration"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>
-                      <div className="flex items-center">
-                        <DollarSign className="mr-2 h-4 w-4" />
-                        Cost
-                      </div>
+                      <Clock className="inline mr-2 h-4 w-4" />
+                      Duration (hours)
                     </FormLabel>
                     <FormControl>
-                      <Input type="number" placeholder="Enter job cost" {...field} />
+                      <Input type="text" placeholder="e.g. 2.5" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -251,12 +250,10 @@ export function JobFormDialog({ isOpen, onClose, onSuccess, initialData }: JobFo
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormItem className="flex flex-col">
+              <FormItem>
                 <FormLabel>
-                  <div className="flex items-center">
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    Date
-                  </div>
+                  <CalendarIcon className="inline mr-2 h-4 w-4" />
+                  Date
                 </FormLabel>
                 <Popover>
                   <PopoverTrigger asChild>
@@ -281,10 +278,8 @@ export function JobFormDialog({ isOpen, onClose, onSuccess, initialData }: JobFo
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>
-                      <div className="flex items-center">
-                        <Clock className="mr-2 h-4 w-4" />
-                        Time
-                      </div>
+                      <Clock className="inline mr-2 h-4 w-4" />
+                      Time
                     </FormLabel>
                     <FormControl>
                       <Input type="time" {...field} />
@@ -295,79 +290,77 @@ export function JobFormDialog({ isOpen, onClose, onSuccess, initialData }: JobFo
               />
             </div>
 
-            <FormField
-              control={form.control}
-              name="duration"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>
-                    <div className="flex items-center">
-                      <Clock className="mr-2 h-4 w-4" />
-                      Duration (hours)
-                    </div>
-                  </FormLabel>
-                  <FormControl>
-                    <Input type="text" placeholder="e.g. 2, 2.5" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <div className="border rounded-md p-4 bg-muted space-y-4">
+              <h3 className="text-sm font-medium text-muted-foreground">Service Items</h3>
 
-            <FormItem>
-              <FormLabel>
-                <div className="flex items-center">
-                  <Image className="mr-2 h-4 w-4" />
-                  Photos
-                </div>
-              </FormLabel>
-              <div className="space-y-3">
-                <FormControl>
-                  <label className="cursor-pointer">
-                    <div className="flex items-center justify-center border-2 border-dashed border-gray-300 rounded-md p-6 hover:border-primary">
-                      <div className="text-center">
-                        <Plus className="mx-auto h-6 w-6 text-muted-foreground" />
-                        <span className="mt-2 block text-sm font-medium text-muted-foreground">Add photos</span>
-                      </div>
-                      <Input type="file" accept="image/*" multiple onChange={handleImageChange} className="hidden" />
-                    </div>
-                  </label>
-                </FormControl>
+              {items.map((item, idx) => {
+                const isCustom = item.description === "Custom Service";
 
-                {imagePreviewUrls.length > 0 && (
-                  <div className="mt-4">
-                    <h4 className="text-sm font-medium mb-2">New Photos</h4>
-                    <div className="grid grid-cols-4 gap-2">
-                      {imagePreviewUrls.map((url, index) => (
-                        <Avatar key={index} className="h-16 w-16 rounded-md">
-                          <AvatarImage src={url} alt={`Preview ${index}`} className="object-cover" />
-                          <AvatarFallback className="rounded-md">IMG</AvatarFallback>
-                        </Avatar>
-                      ))}
+                return (
+                  <div key={idx} className="grid grid-cols-1 md:grid-cols-6 gap-3 items-end">
+                    <div className="md:col-span-2">
+                      <label className="text-xs mb-1 block">Service</label>
+                      <select
+                        className="w-full border p-2 text-sm"
+                        value={isCustom ? "Custom Service" : item.description}
+                        onChange={(e) => handleServiceSelect(idx, e.target.value)}
+                      >
+                        <option value="">Choose a service</option>
+                        {predefinedServices.map((service) => (
+                          <option key={service.label} value={service.label}>
+                            {service.label}
+                          </option>
+                        ))}
+                        <option value="Custom Service">Custom Service</option>
+                      </select>
+
+                      {isCustom && (
+                        <Input
+                          placeholder="Custom name"
+                          value={item.description === "Custom Service" ? "" : item.description}
+                          onChange={(e) => handleItemChange(idx, "description", e.target.value)}
+                          className="mt-2"
+                        />
+                      )}
+                    </div>
+
+                    <div>
+                      <label className="text-xs mb-1 block">
+                        {item.billingType === "unit"
+                          ? item.rateLabel || "Units"
+                          : item.billingType === "hourly"
+                          ? "Hours"
+                          : "Qty"}
+                      </label>
+                      <Input
+                        type="number"
+                        value={item.quantity}
+                        onChange={(e) => handleItemChange(idx, "quantity", e.target.value)}
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-xs mb-1 block">Unit Price</label>
+                      <Input
+                        type="number"
+                        value={item.unit_price}
+                        onChange={(e) => handleItemChange(idx, "unit_price", e.target.value)}
+                      />
                     </div>
                   </div>
-                )}
+                );
+              })}
 
-                {existingPhotos.length > 0 && initialData?.id && (
-                  <div className="mt-4">
-                    <h4 className="text-sm font-medium mb-2">Existing Photos</h4>
-                    <div className="grid grid-cols-4 gap-2">
-                      {existingPhotos.map((photo, index) => (
-                        <Avatar key={index} className="h-16 w-16 rounded-md">
-                          <AvatarImage
-                            src={getPhotoUrl(initialData.id, photo.name)}
-                            alt={`Job Photo ${index}`}
-                            className="object-cover"
-                          />
-                          <AvatarFallback className="rounded-md">IMG</AvatarFallback>
-                        </Avatar>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-              <FormMessage />
-            </FormItem>
+              <Button type="button" variant="secondary" onClick={handleAddItem} className="text-sm">
+                <Plus className="mr-2 h-4 w-4" />
+                Add Service
+              </Button>
+            </div>
+
+            <div className="flex justify-between items-center pt-4 font-medium text-sm">
+              <span className="text-muted-foreground">Proposed Total</span>
+              <span>${calculateTotal()}</span>
+            </div>
 
             <DialogFooter>
               <Button type="button" variant="outline" onClick={onClose}>
