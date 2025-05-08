@@ -18,7 +18,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Search } from 'lucide-react';
+import { Plus, Search, Trash, CheckCircle, Pencil } from 'lucide-react';
 import { InvoiceFormDialog } from '@/components/invoices/InvoiceFormDialog';
 import { EditInvoiceDialog } from '@/components/invoices/EditInvoiceDialog';
 
@@ -65,7 +65,7 @@ export default function Invoices() {
     fetchInvoices();
   }, []);
 
-  const filteredInvoices = invoices.filter(invoice => {
+  const filteredInvoices = invoices.filter((invoice) => {
     const title = invoice.job?.title || '';
     return title.toLowerCase().includes(searchTerm.toLowerCase());
   });
@@ -82,12 +82,30 @@ export default function Invoices() {
       case 'paid':
         return <Badge className="bg-green-500 hover:bg-green-600">Paid</Badge>;
       case 'pending':
-        return <Badge variant="outline" className="text-amber-500 border-amber-500">Pending</Badge>;
+        return (
+          <Badge variant="outline" className="text-amber-500 border-amber-500">
+            Pending
+          </Badge>
+        );
       case 'overdue':
         return <Badge className="bg-red-500 hover:bg-red-600">Overdue</Badge>;
       default:
         return null;
     }
+  };
+
+  const markAsPaid = async (invoiceId: string) => {
+    const { error } = await supabase
+      .from('invoices')
+      .update({ paid: true })
+      .eq('id', invoiceId);
+    if (!error) fetchInvoices();
+  };
+
+  const deleteInvoice = async (invoiceId: string) => {
+    if (!confirm('Are you sure you want to delete this invoice?')) return;
+    const { error } = await supabase.from('invoices').delete().eq('id', invoiceId);
+    if (!error) fetchInvoices();
   };
 
   return (
@@ -148,13 +166,38 @@ export default function Invoices() {
                         <TableCell className="font-medium">
                           {invoice.job?.title || '—'}
                         </TableCell>
-                        <TableCell>{new Date(invoice.due_date).toLocaleDateString()}</TableCell>
+                        <TableCell>
+                          {new Date(invoice.due_date).toLocaleDateString()}
+                        </TableCell>
                         <TableCell>{getStatusBadge(getStatusFromInvoice(invoice))}</TableCell>
                         <TableCell>${Number(invoice.amount).toFixed(2)}</TableCell>
                         <TableCell className="text-right">
                           <div className="flex justify-end gap-2">
-                            <Button variant="outline" size="sm" onClick={() => setEditInvoice(invoice)}>
-                              Edit
+                            {!invoice.paid && (
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                onClick={() => markAsPaid(invoice.id)}
+                                title="Mark as Paid"
+                              >
+                                <CheckCircle className="w-4 h-4 text-green-600" />
+                              </Button>
+                            )}
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              onClick={() => setEditInvoice(invoice)}
+                              title="Edit"
+                            >
+                              <Pencil className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              onClick={() => deleteInvoice(invoice.id)}
+                              title="Delete"
+                            >
+                              <Trash className="w-4 h-4 text-red-600" />
                             </Button>
                           </div>
                         </TableCell>
@@ -180,7 +223,9 @@ export default function Invoices() {
                                       <TableCell>{item.description}</TableCell>
                                       <TableCell>{item.quantity}</TableCell>
                                       <TableCell>${item.unit_price.toFixed(2)}</TableCell>
-                                      <TableCell>${(item.quantity * item.unit_price).toFixed(2)}</TableCell>
+                                      <TableCell>
+                                        ${(item.quantity * item.unit_price).toFixed(2)}
+                                      </TableCell>
                                     </TableRow>
                                   ))}
                                 </TableBody>
