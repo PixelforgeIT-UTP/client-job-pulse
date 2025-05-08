@@ -11,6 +11,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "mapbox-gl": "^2.15.0",
+    "@mapbox/mapbox-gl-geocoder": "^5.1.2",
     "react-signature-canvas": "1.1.0-alpha.2",
     "@hookform/resolvers": "^3.9.0",
     "@radix-ui/react-accordion": "^1.2.0",
