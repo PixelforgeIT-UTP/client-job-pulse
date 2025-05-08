@@ -1,7 +1,5 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useForm, FormProvider } from "react-hook-form";
-import mapboxgl from "mapbox-gl";
-import MapboxGeocoder from "@mapbox/mapbox-gl-geocoder";
 import {
   Dialog,
   DialogContent,
@@ -28,8 +26,6 @@ import { cn } from "@/lib/utils";
 import { supabase } from "@/lib/supabaseClient";
 import { useToast } from "@/hooks/use-toast";
 import { ClientSelector } from "./ClientSelector";
-
-mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN!;
 
 interface JobFormDialogProps {
   isOpen: boolean;
@@ -60,9 +56,6 @@ export function JobFormDialog({ isOpen, onClose, onSuccess, initialData }: JobFo
   const [imagePreviewUrls, setImagePreviewUrls] = useState<string[]>([]);
   const [existingPhotos, setExistingPhotos] = useState<any[]>([]);
   const [userId, setUserId] = useState<string | null>(null);
-  const [coordinates, setCoordinates] = useState<[number, number] | null>(null);
-  const geocoderRef = useRef<HTMLDivElement | null>(null);
-  const mapRef = useRef<mapboxgl.Map | null>(null);
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -75,46 +68,6 @@ export function JobFormDialog({ isOpen, onClose, onSuccess, initialData }: JobFo
       fetchJobPhotos(initialData.id);
     }
   }, [initialData]);
-
-  useEffect(() => {
-    if (!isOpen || !geocoderRef.current) return;
-
-    const geocoder = new MapboxGeocoder({
-      accessToken: mapboxgl.accessToken!,
-      types: "address",
-      placeholder: "Enter a full address",
-      marker: false,
-    });
-
-    geocoderRef.current.innerHTML = "";
-    geocoder.addTo(geocoderRef.current);
-
-    geocoder.on("result", (e) => {
-      const place = e.result;
-      form.setValue("location", place.place_name);
-      if (place.geometry) {
-        const [lng, lat] = place.geometry.coordinates;
-        setCoordinates([lat, lng]);
-      }
-    });
-
-    return () => geocoder.clear();
-  }, [isOpen]);
-
-  useEffect(() => {
-    if (!coordinates) return;
-    if (mapRef.current) mapRef.current.remove();
-
-    const map = new mapboxgl.Map({
-      container: "map",
-      style: "mapbox://styles/mapbox/streets-v11",
-      center: [coordinates[1], coordinates[0]],
-      zoom: 14,
-    });
-
-    new mapboxgl.Marker().setLngLat([coordinates[1], coordinates[0]]).addTo(map);
-    mapRef.current = map;
-  }, [coordinates]);
 
   async function fetchJobPhotos(jobId: string) {
     try {
@@ -141,8 +94,6 @@ export function JobFormDialog({ isOpen, onClose, onSuccess, initialData }: JobFo
         scheduled_at: scheduledDateTime.toISOString(),
         status: initialData?.status || "scheduled",
         created_by: userId,
-        lat: coordinates?.[0] || null,
-        lng: coordinates?.[1] || null,
       };
 
       let jobId = initialData?.id;
@@ -238,43 +189,29 @@ export function JobFormDialog({ isOpen, onClose, onSuccess, initialData }: JobFo
               )}
             />
 
-            <FormItem>
-              <FormLabel>Location*</FormLabel>
-              <FormControl>
-                <div
-                  ref={geocoderRef}
-                  className="w-full min-h-[50px] border border-muted rounded-md px-2 py-1"
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
+            <FormField
+              control={form.control}
+              name="location"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Location*</FormLabel>
+                  <FormControl><Input placeholder="Enter job location" {...field} /></FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-            {coordinates && (
-              <div className="h-64 w-full mt-4 rounded-md overflow-hidden">
-                <div id="map" className="w-full h-full" />
-              </div>
-            )}
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="location"
-                render={({ field }) => (
-                  <FormItem className="hidden"><FormControl><Input readOnly {...field} /></FormControl></FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="cost"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel><DollarSign className="mr-2 h-4 w-4" /> Cost</FormLabel>
-                    <FormControl><Input type="number" placeholder="Enter job cost" {...field} /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
+            <FormField
+              control={form.control}
+              name="cost"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel><DollarSign className="mr-2 h-4 w-4" /> Cost</FormLabel>
+                  <FormControl><Input type="number" placeholder="Enter job cost" {...field} /></FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormItem>
