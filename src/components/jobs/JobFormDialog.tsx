@@ -43,7 +43,7 @@ export function JobFormDialog({ isOpen, onClose, onSuccess, initialData }: JobFo
       description: initialData?.description || "",
       location: initialData?.location || "",
       cost: initialData?.cost || "",
-      scheduled_time: initialData?.scheduled_time || "",
+      scheduled_at: initialData?.scheduled_at || "",
       duration: initialData?.duration || "",
     },
   });
@@ -83,8 +83,8 @@ export function JobFormDialog({ isOpen, onClose, onSuccess, initialData }: JobFo
     setIsSubmitting(true);
     try {
       const scheduledDateTime = date ? new Date(date) : new Date();
-      if (data.scheduled_time) {
-        const [hours, minutes] = data.scheduled_time.split(":").map(Number);
+      if (data.scheduled_at) {
+        const [hours, minutes] = data.scheduled_at.split(":").map(Number);
         scheduledDateTime.setHours(hours, minutes);
       }
 
