@@ -20,12 +20,14 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Plus, Search } from 'lucide-react';
 import { InvoiceFormDialog } from '@/components/invoices/InvoiceFormDialog';
+import { EditInvoiceDialog } from '@/components/invoices/EditInvoiceDialog';
 
 export default function Invoices() {
   const [searchTerm, setSearchTerm] = useState('');
   const [invoices, setInvoices] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [editInvoice, setEditInvoice] = useState<any | null>(null);
 
   const fetchInvoices = async () => {
     setLoading(true);
@@ -37,8 +39,12 @@ export default function Invoices() {
         paid,
         due_date,
         job:jobs (
-          title,
-          description
+          title
+        ),
+        items:invoice_items (
+          description,
+          quantity,
+          unit_price
         )
       `)
       .order('due_date', { ascending: true });
@@ -61,11 +67,7 @@ export default function Invoices() {
 
   const filteredInvoices = invoices.filter(invoice => {
     const title = invoice.job?.title || '';
-    const desc = invoice.job?.description || '';
-    return (
-      title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      desc.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    return title.toLowerCase().includes(searchTerm.toLowerCase());
   });
 
   const getStatusFromInvoice = (invoice: any) => {
@@ -112,7 +114,7 @@ export default function Invoices() {
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
                 type="search"
-                placeholder="Search invoices..."
+                placeholder="Search by job title..."
                 className="w-full pl-8"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
@@ -125,43 +127,73 @@ export default function Invoices() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Job Title</TableHead>
-                  <TableHead>Description</TableHead>
-                  <TableHead>Amount</TableHead>
-                  <TableHead className="hidden md:table-cell">Due Date</TableHead>
+                  <TableHead>Job</TableHead>
+                  <TableHead>Due Date</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead>Amount</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="h-24 text-center">
+                    <TableCell colSpan={5} className="h-24 text-center">
                       Loading...
                     </TableCell>
                   </TableRow>
                 ) : filteredInvoices.length > 0 ? (
                   filteredInvoices.map((invoice) => (
-                    <TableRow key={invoice.id}>
-                      <TableCell className="font-medium">
-                        {invoice.job?.title || '—'}
-                      </TableCell>
-                      <TableCell>{invoice.job?.description || '—'}</TableCell>
-                      <TableCell>${Number(invoice.amount).toLocaleString()}</TableCell>
-                      <TableCell className="hidden md:table-cell">
-                        {new Date(invoice.due_date).toLocaleDateString()}
-                      </TableCell>
-                      <TableCell>
-                        {getStatusBadge(getStatusFromInvoice(invoice))}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button variant="outline" size="sm">View</Button>
-                      </TableCell>
-                    </TableRow>
+                    <>
+                      <TableRow key={invoice.id}>
+                        <TableCell className="font-medium">
+                          {invoice.job?.title || '—'}
+                        </TableCell>
+                        <TableCell>{new Date(invoice.due_date).toLocaleDateString()}</TableCell>
+                        <TableCell>{getStatusBadge(getStatusFromInvoice(invoice))}</TableCell>
+                        <TableCell>${Number(invoice.amount).toFixed(2)}</TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-2">
+                            <Button variant="outline" size="sm" onClick={() => setEditInvoice(invoice)}>
+                              Edit
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+
+                      {invoice.items?.length > 0 && (
+                        <TableRow>
+                          <TableCell colSpan={5}>
+                            <div className="border rounded p-2 bg-muted space-y-2">
+                              <p className="font-semibold">Line Items</p>
+                              <Table>
+                                <TableHeader>
+                                  <TableRow>
+                                    <TableHead>Description</TableHead>
+                                    <TableHead>Qty</TableHead>
+                                    <TableHead>Unit Price</TableHead>
+                                    <TableHead>Total</TableHead>
+                                  </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                  {invoice.items.map((item, idx) => (
+                                    <TableRow key={idx}>
+                                      <TableCell>{item.description}</TableCell>
+                                      <TableCell>{item.quantity}</TableCell>
+                                      <TableCell>${item.unit_price.toFixed(2)}</TableCell>
+                                      <TableCell>${(item.quantity * item.unit_price).toFixed(2)}</TableCell>
+                                    </TableRow>
+                                  ))}
+                                </TableBody>
+                              </Table>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </>
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={6} className="h-24 text-center">
+                    <TableCell colSpan={5} className="h-24 text-center">
                       No invoices found
                     </TableCell>
                   </TableRow>
@@ -172,9 +204,17 @@ export default function Invoices() {
         </CardContent>
       </Card>
 
+      {/* Modals */}
       <InvoiceFormDialog
         isOpen={isDialogOpen}
         onClose={() => setIsDialogOpen(false)}
+        onSuccess={fetchInvoices}
+      />
+
+      <EditInvoiceDialog
+        isOpen={!!editInvoice}
+        invoice={editInvoice}
+        onClose={() => setEditInvoice(null)}
         onSuccess={fetchInvoices}
       />
     </div>
