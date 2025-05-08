@@ -1,95 +1,75 @@
-import { useEffect, useState } from 'react';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
-import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
 
-interface JobNotesDialogProps {
+import { useState } from 'react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+
+type JobNotesDialogProps = {
   isOpen: boolean;
   onClose: () => void;
-  job: { id: string; title: string };
-  onUpdate?: () => void;
-}
+  jobId: string;
+  currentNotes: string | null;
+};
 
-export function JobNotesDialog({
-  isOpen,
-  onClose,
-  job,
-  onUpdate,
+export default function JobNotesDialog({ 
+  isOpen, 
+  onClose, 
+  jobId, 
+  currentNotes 
 }: JobNotesDialogProps) {
-  const { toast } = useToast();
-  const [notes, setNotes] = useState('');
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-
-  useEffect(() => {
-    if (!job?.id) return;
-    setLoading(true);
-    supabase
-      .from('jobs')
-      .select('notes')
-      .eq('id', job.id)
-      .maybeSingle()
-      .then(({ data, error }) => {
-        if (!error && data) setNotes(data.notes || '');
-      })
-      .finally(() => setLoading(false));
-  }, [job]);
+  const [notes, setNotes] = useState(currentNotes || '');
+  const [isSaving, setIsSaving] = useState(false);
 
   const handleSave = async () => {
-    setSaving(true);
-    const { error } = await supabase
-      .from('jobs')
-      .update({ notes })
-      .eq('id', job.id);
-
-    if (error) {
-      toast({
-        title: 'Error saving notes',
-        description: error.message,
-        variant: 'destructive',
-      });
-    } else {
-      toast({ title: 'Notes updated' });
-      onUpdate?.();
+    setIsSaving(true);
+    
+    try {
+      const { error } = await supabase
+        .from('jobs')
+        .update({ notes })
+        .eq('id', jobId);
+      
+      if (error) throw error;
+      
+      toast.success('Notes saved successfully');
       onClose();
+    } catch (error) {
+      console.error('Error saving notes:', error);
+      toast.error('Failed to save notes');
     }
-    setSaving(false);
+    
+    // Use Promise.then().finally() pattern instead of just .finally()
+    // This fixes the TypeScript error
+    Promise.resolve().then(() => {
+      setIsSaving(false);
+    });
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-lg space-y-4">
+      <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle>Notes for "{job.title}"</DialogTitle>
+          <DialogTitle>Job Notes</DialogTitle>
         </DialogHeader>
-
-        {loading ? (
-          <p className="text-muted-foreground text-sm">Loading notes...</p>
-        ) : (
+        <div className="space-y-4">
           <Textarea
+            placeholder="Enter notes about this job..."
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
-            rows={6}
-            placeholder="Enter or edit notes for this job..."
+            rows={10}
+            className="resize-none"
           />
-        )}
-
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose}>
-            Cancel
-          </Button>
-          <Button onClick={handleSave} disabled={saving || loading}>
-            {saving ? 'Saving...' : 'Save Notes'}
-          </Button>
-        </DialogFooter>
+          <div className="flex justify-end space-x-2">
+            <Button variant="outline" onClick={onClose} disabled={isSaving}>
+              Cancel
+            </Button>
+            <Button onClick={handleSave} disabled={isSaving}>
+              {isSaving ? 'Saving...' : 'Save Notes'}
+            </Button>
+          </div>
+        </div>
       </DialogContent>
     </Dialog>
   );
