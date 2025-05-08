@@ -23,17 +23,19 @@ import { supabase } from '@/integrations/supabase/client';
 import { JobFormDialog } from '@/components/jobs/JobFormDialog';
 import { format } from 'date-fns';
 import { JobPhotosDialog } from '@/components/jobs/JobPhotosDialog';
+import { JobNotesDialog } from '@/components/jobs/JobNotesDialog';
 
 export default function Jobs() {
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState('');
   const [jobs, setJobs] = useState<any[]>([]);
-  const [clients, setClients] = useState<{[key: string]: string}>({});
+  const [clients, setClients] = useState<{ [key: string]: string }>({});
   const [isLoading, setIsLoading] = useState(true);
   const [isJobFormOpen, setIsJobFormOpen] = useState(false);
   const [selectedJob, setSelectedJob] = useState<any>(null);
   const [isPhotosDialogOpen, setIsPhotosDialogOpen] = useState(false);
-  
+  const [isNotesDialogOpen, setIsNotesDialogOpen] = useState(false);
+
   useEffect(() => {
     fetchJobs();
     fetchClients();
@@ -68,9 +70,8 @@ export default function Jobs() {
         .select('id, name');
 
       if (error) throw error;
-      
-      // Create a lookup object for client names
-      const clientMap: {[key: string]: string} = {};
+
+      const clientMap: { [key: string]: string } = {};
       if (data) {
         data.forEach(client => {
           clientMap[client.id] = client.name;
@@ -82,8 +83,7 @@ export default function Jobs() {
     }
   }
 
-  // Filter jobs based on search term
-  const filteredJobs = jobs.filter(job => 
+  const filteredJobs = jobs.filter(job =>
     job.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     clients[job.client_id]?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     job.location?.toLowerCase().includes(searchTerm.toLowerCase())
@@ -125,6 +125,11 @@ export default function Jobs() {
   function handleViewPhotos(job: any) {
     setSelectedJob(job);
     setIsPhotosDialogOpen(true);
+  }
+
+  function handleViewNotes(job: any) {
+    setSelectedJob(job);
+    setIsNotesDialogOpen(true);
   }
 
   return (
@@ -208,6 +213,9 @@ export default function Jobs() {
                             <Button variant="outline" size="sm" onClick={() => handleViewPhotos(job)}>
                               Photos
                             </Button>
+                            <Button variant="secondary" size="sm" onClick={() => handleViewNotes(job)}>
+                              Notes
+                            </Button>
                             <Button variant="default" size="sm" onClick={() => handleEditJob(job)}>
                               Edit
                             </Button>
@@ -229,19 +237,27 @@ export default function Jobs() {
         </CardContent>
       </Card>
 
-      <JobFormDialog 
-        isOpen={isJobFormOpen} 
+      <JobFormDialog
+        isOpen={isJobFormOpen}
         onClose={() => setIsJobFormOpen(false)}
         initialData={selectedJob}
         onSuccess={fetchJobs}
       />
-      
+
       {selectedJob && (
-        <JobPhotosDialog
-          isOpen={isPhotosDialogOpen}
-          onClose={() => setIsPhotosDialogOpen(false)}
-          jobId={selectedJob.id}
-        />
+        <>
+          <JobPhotosDialog
+            isOpen={isPhotosDialogOpen}
+            onClose={() => setIsPhotosDialogOpen(false)}
+            jobId={selectedJob.id}
+          />
+          <JobNotesDialog
+            isOpen={isNotesDialogOpen}
+            onClose={() => setIsNotesDialogOpen(false)}
+            job={selectedJob}
+            onUpdate={fetchJobs}
+          />
+        </>
       )}
     </div>
   );
