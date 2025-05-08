@@ -36,10 +36,10 @@
 
     /* Sidebar variables */
     --sidebar: black; /* light gray */
-    --sidebar-foreground: 222.2 47.4% 11.2%; /* near-black text */
+    --sidebar-foreground: black; /* near-black text */
     --sidebar-border: blue;
-    --sidebar-accent: 210 40% 92%;
-    --sidebar-accent-foreground: 222.2 47.4% 11.2%;
+    --sidebar-accent: black;
+    --sidebar-accent-foreground: black;
   }
   }
 
