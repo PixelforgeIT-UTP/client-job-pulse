@@ -35,9 +35,9 @@
     --radius: 0.5rem;
 
     /* Sidebar variables */
-    --sidebar: 220 14% 96%; /* light gray */
+    --sidebar: black; /* light gray */
     --sidebar-foreground: 222.2 47.4% 11.2%; /* near-black text */
-    --sidebar-border: 220 13% 91%;
+    --sidebar-border: blue;
     --sidebar-accent: 210 40% 92%;
     --sidebar-accent-foreground: 222.2 47.4% 11.2%;
   }
