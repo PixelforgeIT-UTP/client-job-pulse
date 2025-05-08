@@ -19,38 +19,40 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Plus, Search } from 'lucide-react';
+import { InvoiceFormDialog } from '@/components/invoices/InvoiceFormDialog';
 
 export default function Invoices() {
   const [searchTerm, setSearchTerm] = useState('');
   const [invoices, setInvoices] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+
+  const fetchInvoices = async () => {
+    setLoading(true);
+    const { data, error } = await supabase
+      .from('invoices')
+      .select(`
+        id,
+        amount,
+        paid,
+        due_date,
+        jobs (
+          client_name,
+          job_description
+        )
+      `)
+      .order('due_date', { ascending: true });
+
+    if (error) {
+      console.error('Error fetching invoices:', error);
+    } else {
+      setInvoices(data || []);
+    }
+
+    setLoading(false);
+  };
 
   useEffect(() => {
-    const fetchInvoices = async () => {
-      setLoading(true);
-      const { data, error } = await supabase
-        .from('invoices')
-        .select(`
-          id,
-          amount,
-          paid,
-          due_date,
-          jobs (
-            client_name,
-            job_description
-          )
-        `)
-        .order('due_date', { ascending: true });
-
-      if (error) {
-        console.error('Error fetching invoices:', error);
-      } else {
-        setInvoices(data || []);
-      }
-
-      setLoading(false);
-    };
-
     fetchInvoices();
   }, []);
 
@@ -90,7 +92,7 @@ export default function Invoices() {
           <h1 className="text-2xl font-bold tracking-tight">Invoices</h1>
           <p className="text-muted-foreground">Manage your client invoices</p>
         </div>
-        <Button>
+        <Button onClick={() => setIsDialogOpen(true)}>
           <Plus className="mr-2 h-4 w-4" />
           New Invoice
         </Button>
@@ -166,6 +168,13 @@ export default function Invoices() {
           </div>
         </CardContent>
       </Card>
+
+      {/* ✅ Modal appears here */}
+      <InvoiceFormDialog
+        isOpen={isDialogOpen}
+        onClose={() => setIsDialogOpen(false)}
+        onSuccess={fetchInvoices}
+      />
     </div>
   );
 }
