@@ -37,8 +37,8 @@ export default function Invoices() {
         paid,
         due_date,
         job:jobs (
-          client_name,
-          job_description
+          title,
+          description
         )
       `)
       .order('due_date', { ascending: true });
@@ -60,11 +60,11 @@ export default function Invoices() {
   }, []);
 
   const filteredInvoices = invoices.filter(invoice => {
-    const client = invoice.job?.client_name || '';
-    const job = invoice.job?.job_description || '';
+    const title = invoice.job?.title || '';
+    const desc = invoice.job?.description || '';
     return (
-      client.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      job.toLowerCase().includes(searchTerm.toLowerCase())
+      title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      desc.toLowerCase().includes(searchTerm.toLowerCase())
     );
   });
 
@@ -125,8 +125,8 @@ export default function Invoices() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Client</TableHead>
-                  <TableHead>Job</TableHead>
+                  <TableHead>Job Title</TableHead>
+                  <TableHead>Description</TableHead>
                   <TableHead>Amount</TableHead>
                   <TableHead className="hidden md:table-cell">Due Date</TableHead>
                   <TableHead>Status</TableHead>
@@ -144,9 +144,9 @@ export default function Invoices() {
                   filteredInvoices.map((invoice) => (
                     <TableRow key={invoice.id}>
                       <TableCell className="font-medium">
-                        {invoice.job?.client_name || '—'}
+                        {invoice.job?.title || '—'}
                       </TableCell>
-                      <TableCell>{invoice.job?.job_description || '—'}</TableCell>
+                      <TableCell>{invoice.job?.description || '—'}</TableCell>
                       <TableCell>${Number(invoice.amount).toLocaleString()}</TableCell>
                       <TableCell className="hidden md:table-cell">
                         {new Date(invoice.due_date).toLocaleDateString()}
