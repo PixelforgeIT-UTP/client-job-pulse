@@ -13,7 +13,7 @@ type JobNotesDialogProps = {
   currentNotes: string | null;
 };
 
-export default function JobNotesDialog({ 
+export function JobNotesDialog({ 
   isOpen, 
   onClose, 
   jobId, 
