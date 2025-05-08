@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -51,7 +52,7 @@ export function EditInvoiceDialog({ isOpen, onClose, invoice, onSuccess }: {
     const { error: updateError } = await supabase
       .from('invoices')
       .update({
-        due_date,
+        due_date: dueDate,
         amount: Number(calculateTotal())
       })
       .eq('id', invoice.id);

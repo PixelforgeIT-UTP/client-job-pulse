@@ -1,4 +1,3 @@
-
 import { createContext, useContext, useEffect, useState } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { useNavigate } from 'react-router-dom';
@@ -9,6 +8,7 @@ type AuthContextType = {
   session: Session | null;
   user: User | null;
   loading: boolean;
+  isAdmin: boolean;
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
@@ -20,6 +20,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -33,18 +34,43 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
   };
 
+  // Check if the current user is an admin
+  const checkAdminStatus = async (userId: string) => {
+    if (!userId) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', userId)
+        .single();
+      
+      if (error) {
+        console.error('Error checking admin status:', error);
+        return;
+      }
+      
+      setIsAdmin(data?.role === 'admin');
+    } catch (err) {
+      console.error('Failed to check admin status:', err);
+    }
+  };
+
   useEffect(() => {
     // Set up auth state listener first
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, newSession) => {
       setSession(newSession);
       setUser(newSession?.user ?? null);
       
-      if (event === 'SIGNED_IN') {
+      if (event === 'SIGNED_IN' && newSession?.user) {
+        checkAdminStatus(newSession.user.id);
+        
         // Defer data fetching to prevent deadlocks
         setTimeout(() => {
           navigate('/');
         }, 0);
       } else if (event === 'SIGNED_OUT') {
+        setIsAdmin(false);
         navigate('/login');
       }
     });
@@ -53,6 +79,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
       setSession(currentSession);
       setUser(currentSession?.user ?? null);
+      
+      if (currentSession?.user) {
+        checkAdminStatus(currentSession.user.id);
+      }
+      
       setLoading(false);
       
       if (!currentSession) {
@@ -149,7 +180,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ session, user, loading, signIn, signUp, signOut }}>
+    <AuthContext.Provider value={{ session, user, loading, isAdmin, signIn, signUp, signOut }}>
       {children}
     </AuthContext.Provider>
   );
