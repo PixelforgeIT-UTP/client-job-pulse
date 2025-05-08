@@ -43,10 +43,13 @@ export default function Invoices() {
       `)
       .order('due_date', { ascending: true });
 
+    console.log("📦 Supabase Invoices Response:", data);
     if (error) {
-      console.error('Error fetching invoices:', error);
-    } else {
-      setInvoices(data || []);
+      console.error("❌ Supabase Error:", error);
+    }
+
+    if (data) {
+      setInvoices(data);
     }
 
     setLoading(false);
@@ -169,7 +172,6 @@ export default function Invoices() {
         </CardContent>
       </Card>
 
-      {/* ✅ Modal appears here */}
       <InvoiceFormDialog
         isOpen={isDialogOpen}
         onClose={() => setIsDialogOpen(false)}
