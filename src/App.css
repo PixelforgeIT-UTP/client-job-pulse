@@ -1,12 +1,15 @@
+/* Root container using Tailwind color variables */
 #root {
   max-width: 1280px;
   margin: 0 auto;
   padding: 2rem;
   text-align: center;
-  background-color: #fdfdfd; /* light pastel background */
-  color: #2b2e4a; /* dark slate text */
+
+  background-color: hsl(var(--background));
+  color: hsl(var(--foreground));
 }
 
+/* Logo styles */
 .logo {
   height: 6em;
   padding: 1.5em;
@@ -22,6 +25,7 @@
   filter: drop-shadow(0 0 2em #38bdf8aa); /* pastel blue glow */
 }
 
+/* Logo spin animation */
 @keyframes logo-spin {
   from {
     transform: rotate(0deg);
@@ -37,34 +41,36 @@
   }
 }
 
+/* Card layout using Tailwind variables */
 .card {
   padding: 2em;
-  background-color: #ffffff; /* soft white card */
-  border-radius: 12px;
+  background-color: hsl(var(--card));
+  color: hsl(var(--card-foreground));
+  border-radius: 0.75rem;
   box-shadow: 0 4px 20px rgba(100, 116, 139, 0.1);
 }
 
+/* Soft help text using Tailwind muted color */
 .read-the-docs {
-  color: #94a3b8; /* soft muted slate blue */
+  color: hsl(var(--muted-foreground));
 }
 
-/* Optional dark mode (if toggled with class or media query) */
-@media (prefers-color-scheme: dark) {
-  #root {
-    background-color: #1e293b;
-    color: #f1f5f9;
-  }
-
-  .card {
-    background-color: #334155;
-    color: #f1f5f9;
-  }
-
-  .read-the-docs {
-    color: #cbd5e1;
-  }
+/* Dark mode (class-based, not media query) */
+.dark #root {
+  background-color: hsl(var(--background));
+  color: hsl(var(--foreground));
 }
+
+.dark .card {
+  background-color: hsl(var(--card));
+  color: hsl(var(--card-foreground));
+}
+
+.dark .read-the-docs {
+  color: hsl(var(--muted-foreground));
+}
+
+/* Mapbox geocoder override */
 .mapboxgl-ctrl-geocoder {
   width: 100% !important;
 }
-
