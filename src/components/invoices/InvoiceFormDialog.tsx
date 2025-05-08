@@ -25,15 +25,20 @@ export function InvoiceFormDialog({
   const [jobs, setJobs] = useState<any[]>([]);
   const [selectedJobId, setSelectedJobId] = useState('');
   const [dueDate, setDueDate] = useState('');
-  const [items, setItems] = useState([{ description: '', quantity: 1, unit_price: 0 }]);
+  const [items, setItems] = useState([
+    { description: '', quantity: 1, unit_price: 0, billingType: 'flat', rateLabel: '' },
+  ]);
   const [submitting, setSubmitting] = useState(false);
   const [newJobTitle, setNewJobTitle] = useState('');
   const [createNewJob, setCreateNewJob] = useState(false);
 
   const predefinedServices = [
-    { label: 'Consultation', unit_price: 100 },
-    { label: 'Repair', unit_price: 150 },
-    { label: 'Maintenance', unit_price: 75 },
+    { label: 'Raking', billingType: 'flat', rate: 100 },
+    { label: 'Needle', billingType: 'flat', rate: 375 },
+    { label: 'Trucks & Trailers on Site', billingType: 'hourly', rate: 250 },
+    { label: 'Bobcat on Site', billingType: 'hourly', rate: 350 },
+    { label: 'Roll off Bin', billingType: 'flat', rate: 1500 },
+    { label: 'Grass Cutting', billingType: 'unit', rate: 2, unitLabel: 'sq ft' },
   ];
 
   useEffect(() => {
@@ -45,7 +50,7 @@ export function InvoiceFormDialog({
   }, [isOpen]);
 
   const handleAddItem = () => {
-    setItems([...items, { description: '', quantity: 1, unit_price: 0 }]);
+    setItems([...items, { description: '', quantity: 1, unit_price: 0, billingType: 'flat', rateLabel: '' }]);
   };
 
   const handleItemChange = (index: number, field: string, value: any) => {
@@ -58,12 +63,24 @@ export function InvoiceFormDialog({
     const updated = [...items];
 
     if (label === 'Custom Service') {
-      updated[index].description = 'Custom Service';
-      updated[index].unit_price = 0;
+      updated[index] = {
+        ...updated[index],
+        description: 'Custom Service',
+        unit_price: 0,
+        billingType: 'flat',
+        rateLabel: '',
+      };
     } else {
       const match = predefinedServices.find((s) => s.label === label);
-      updated[index].description = label;
-      updated[index].unit_price = match ? match.unit_price : 0;
+      if (match) {
+        updated[index] = {
+          ...updated[index],
+          description: match.label,
+          unit_price: match.rate,
+          billingType: match.billingType,
+          rateLabel: match.unitLabel || '',
+        };
+      }
     }
 
     setItems(updated);
@@ -186,7 +203,7 @@ export function InvoiceFormDialog({
             const isCustom = item.description === 'Custom Service';
 
             return (
-              <div key={idx} className="grid grid-cols-1 md:grid-cols-4 gap-3 items-end">
+              <div key={idx} className="grid grid-cols-1 md:grid-cols-5 gap-3 items-end">
                 <div>
                   <label className="text-xs mb-1 block">Service</label>
                   <select
@@ -214,7 +231,13 @@ export function InvoiceFormDialog({
                 </div>
 
                 <div>
-                  <label className="text-xs mb-1 block">Qty</label>
+                  <label className="text-xs mb-1 block">
+                    {item.billingType === 'unit'
+                      ? item.rateLabel || 'Units'
+                      : item.billingType === 'hourly'
+                      ? 'Hours'
+                      : 'Qty'}
+                  </label>
                   <Input
                     type="number"
                     value={item.quantity}
