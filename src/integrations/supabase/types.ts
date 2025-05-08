@@ -9,64 +9,176 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      audit_log: {
+        Row: {
+          action: string | null
+          actor_id: string | null
+          changed_at: string | null
+          id: string
+          record_id: string | null
+          table_name: string | null
+        }
+        Insert: {
+          action?: string | null
+          actor_id?: string | null
+          changed_at?: string | null
+          id?: string
+          record_id?: string | null
+          table_name?: string | null
+        }
+        Update: {
+          action?: string | null
+          actor_id?: string | null
+          changed_at?: string | null
+          id?: string
+          record_id?: string | null
+          table_name?: string | null
+        }
+        Relationships: []
+      }
       clients: {
         Row: {
           address: string | null
           created_at: string | null
+          created_by: string | null
           email: string | null
           id: string
           name: string
           phone: string | null
+          updated_at: string | null
+          updated_by: string | null
           user_id: string | null
         }
         Insert: {
           address?: string | null
           created_at?: string | null
+          created_by?: string | null
           email?: string | null
           id?: string
           name: string
           phone?: string | null
+          updated_at?: string | null
+          updated_by?: string | null
           user_id?: string | null
         }
         Update: {
           address?: string | null
           created_at?: string | null
+          created_by?: string | null
           email?: string | null
           id?: string
           name?: string
           phone?: string | null
+          updated_at?: string | null
+          updated_by?: string | null
           user_id?: string | null
         }
         Relationships: []
+      }
+      invoice_items: {
+        Row: {
+          description: string | null
+          id: string
+          invoice_id: string | null
+          quantity: number | null
+          unit_price: number | null
+        }
+        Insert: {
+          description?: string | null
+          id?: string
+          invoice_id?: string | null
+          quantity?: number | null
+          unit_price?: number | null
+        }
+        Update: {
+          description?: string | null
+          id?: string
+          invoice_id?: string | null
+          quantity?: number | null
+          unit_price?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoice_items_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       invoices: {
         Row: {
           amount: number | null
           created_at: string | null
+          created_by: string | null
           due_date: string | null
           id: string
           job_id: string | null
           paid: boolean | null
+          updated_at: string | null
+          updated_by: string | null
         }
         Insert: {
           amount?: number | null
           created_at?: string | null
+          created_by?: string | null
           due_date?: string | null
           id?: string
           job_id?: string | null
           paid?: boolean | null
+          updated_at?: string | null
+          updated_by?: string | null
         }
         Update: {
           amount?: number | null
           created_at?: string | null
+          created_by?: string | null
           due_date?: string | null
           id?: string
           job_id?: string | null
           paid?: boolean | null
+          updated_at?: string | null
+          updated_by?: string | null
         }
         Relationships: [
           {
             foreignKeyName: "invoices_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      job_items: {
+        Row: {
+          created_at: string | null
+          description: string
+          id: string
+          job_id: string | null
+          quantity: number
+          unit_price: number
+        }
+        Insert: {
+          created_at?: string | null
+          description: string
+          id?: string
+          job_id?: string | null
+          quantity?: number
+          unit_price?: number
+        }
+        Update: {
+          created_at?: string | null
+          description?: string
+          id?: string
+          job_id?: string | null
+          quantity?: number
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_items_job_id_fkey"
             columns: ["job_id"]
             isOneToOne: false
             referencedRelation: "jobs"
@@ -79,37 +191,52 @@ export type Database = {
           assigned_to: string | null
           client_id: string | null
           completed_at: string | null
+          cost: number | null
           created_at: string | null
-          description: string | null
+          created_by: string | null
+          duration: number | null
           id: string
           location: string | null
+          notes: string | null
           scheduled_at: string | null
           status: string | null
           title: string
+          updated_at: string | null
+          updated_by: string | null
         }
         Insert: {
           assigned_to?: string | null
           client_id?: string | null
           completed_at?: string | null
+          cost?: number | null
           created_at?: string | null
-          description?: string | null
+          created_by?: string | null
+          duration?: number | null
           id?: string
           location?: string | null
+          notes?: string | null
           scheduled_at?: string | null
           status?: string | null
           title: string
+          updated_at?: string | null
+          updated_by?: string | null
         }
         Update: {
           assigned_to?: string | null
           client_id?: string | null
           completed_at?: string | null
+          cost?: number | null
           created_at?: string | null
-          description?: string | null
+          created_by?: string | null
+          duration?: number | null
           id?: string
           location?: string | null
+          notes?: string | null
           scheduled_at?: string | null
           status?: string | null
           title?: string
+          updated_at?: string | null
+          updated_by?: string | null
         }
         Relationships: [
           {
@@ -144,45 +271,45 @@ export type Database = {
       }
       quotes: {
         Row: {
-          amount: number | null
-          client_id: string | null
-          created_at: string | null
+          amount: number
+          client_name: string
+          created_by: string | null
+          date: string | null
           id: string
-          job_id: string | null
+          items: Json | null
+          job_description: string | null
+          signature: string | null
           status: string | null
+          updated_at: string | null
+          updated_by: string | null
         }
         Insert: {
-          amount?: number | null
-          client_id?: string | null
-          created_at?: string | null
+          amount: number
+          client_name: string
+          created_by?: string | null
+          date?: string | null
           id?: string
-          job_id?: string | null
+          items?: Json | null
+          job_description?: string | null
+          signature?: string | null
           status?: string | null
+          updated_at?: string | null
+          updated_by?: string | null
         }
         Update: {
-          amount?: number | null
-          client_id?: string | null
-          created_at?: string | null
+          amount?: number
+          client_name?: string
+          created_by?: string | null
+          date?: string | null
           id?: string
-          job_id?: string | null
+          items?: Json | null
+          job_description?: string | null
+          signature?: string | null
           status?: string | null
+          updated_at?: string | null
+          updated_by?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "quotes_client_id_fkey"
-            columns: ["client_id"]
-            isOneToOne: false
-            referencedRelation: "clients"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "quotes_job_id_fkey"
-            columns: ["job_id"]
-            isOneToOne: false
-            referencedRelation: "jobs"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
     }
     Views: {

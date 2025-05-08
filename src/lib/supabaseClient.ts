@@ -1,6 +1,8 @@
+
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL!;
-const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY!;
+// Import the constants from the integrations/supabase/client.ts file
+import { supabase as supabaseIntegration } from '@/integrations/supabase/client';
 
-export const supabase = createClient(supabaseUrl, supabaseKey);
+// Re-export the existing Supabase client
+export const supabase = supabaseIntegration;
