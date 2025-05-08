@@ -35,12 +35,12 @@
     --radius: 0.5rem;
 
     /* Sidebar variables */
-    --sidebar: 220 13% 95%;
-    --sidebar-foreground: 222.2 47.4% 11.2%;
+    --sidebar: 220 14% 96%; /* light gray */
+    --sidebar-foreground: 222.2 47.4% 11.2%; /* near-black text */
     --sidebar-border: 220 13% 91%;
     --sidebar-accent: 210 40% 92%;
     --sidebar-accent-foreground: 222.2 47.4% 11.2%;
-    --sidebar-ring: 215 20.2% 65.1%;
+  }
   }
 
   .dark {
@@ -72,12 +72,11 @@
     --input: 217 33.3% 20%;
     --ring: 212.7 26.8% 83.9%;
 
-    --sidebar: 222.2 47.4% 10%;
-    --sidebar-foreground: 210 40% 98%;
-    --sidebar-border: 217 33.3% 20%;
-    --sidebar-accent: 217 33.3% 24%;
-    --sidebar-accent-foreground: 210 40% 98%;
-    --sidebar-ring: 212.7 26.8% 73.9%;
+    --sidebar: 222.2 47.4% 11.2%; /* dark slate */
+  --sidebar-foreground: 210 40% 98%; /* light text */
+  --sidebar-border: 217 33.3% 20%;
+  --sidebar-accent: 217 33.3% 24%;
+  --sidebar-accent-foreground: 210 40% 98%;
   }
 
   * {
@@ -91,4 +90,4 @@
   .dashboard-grid {
     @apply grid gap-4 md:grid-cols-2 lg:grid-cols-4;
   }
-}
+
