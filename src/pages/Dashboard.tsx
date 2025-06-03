@@ -1,20 +1,18 @@
 
-import { Briefcase, CreditCard, FileText, Users } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
+import { Calendar, Users, Briefcase, DollarSign } from 'lucide-react';
 import StatCard from '@/components/dashboard/StatCard';
 import RecentClientsCard from '@/components/dashboard/RecentClientsCard';
 import UpcomingJobsCard from '@/components/dashboard/UpcomingJobsCard';
 import InvoiceStatusChart from '@/components/dashboard/InvoiceStatusChart';
+import { supabase } from '@/integrations/supabase/client';
 
 export default function Dashboard() {
   const [stats, setStats] = useState({
-    totalClients: '0',
-    activeJobs: '0',
-    pendingInvoices: '0',
-    revenueMonth: '0',
-    pendingInvoicesCount: 0
+    totalClients: 0,
+    totalJobs: 0,
+    expectedRevenue: 0,
+    completedJobs: 0
   });
   const [isLoading, setIsLoading] = useState(true);
 
@@ -23,112 +21,99 @@ export default function Dashboard() {
   }, []);
 
   async function fetchDashboardStats() {
-    setIsLoading(true);
     try {
       // Fetch total clients
       const { count: clientCount } = await supabase
         .from('clients')
-        .select('*', { count: 'exact', head: true });
+        .select('*', { count: 'exact' });
 
-      // Fetch active jobs
-      const { count: activeJobsCount } = await supabase
+      // Fetch total jobs
+      const { count: jobCount } = await supabase
         .from('jobs')
-        .select('*', { count: 'exact', head: true })
-        .in('status', ['scheduled', 'in_progress']);
+        .select('*', { count: 'exact' });
 
-      // Fetch pending invoices
-      const { data: pendingInvoices } = await supabase
-        .from('invoices')
-        .select('amount')
-        .eq('paid', false);
+      // Fetch completed jobs
+      const { count: completedCount } = await supabase
+        .from('jobs')
+        .select('*', { count: 'exact' })
+        .eq('status', 'completed');
 
-      // Calculate total pending invoice amount
-      const pendingAmount = pendingInvoices?.reduce((sum, invoice) => sum + (Number(invoice.amount) || 0), 0) || 0;
+      // Calculate expected revenue from labor and material costs
+      const { data: jobsData } = await supabase
+        .from('jobs')
+        .select('labor_cost, material_cost, cost')
+        .neq('status', 'cancelled');
 
-      // Fetch paid invoices for current month (revenue)
-      const startOfMonth = new Date();
-      startOfMonth.setDate(1);
-      startOfMonth.setHours(0, 0, 0, 0);
-
-      const { data: paidInvoices } = await supabase
-        .from('invoices')
-        .select('amount')
-        .eq('paid', true)
-        .gte('created_at', startOfMonth.toISOString());
-
-      const monthlyRevenue = paidInvoices?.reduce((sum, invoice) => sum + (Number(invoice.amount) || 0), 0) || 0;
+      let expectedRevenue = 0;
+      if (jobsData) {
+        expectedRevenue = jobsData.reduce((total, job) => {
+          const laborCost = job.labor_cost || 0;
+          const materialCost = job.material_cost || 0;
+          const serviceCost = job.cost || 0;
+          return total + laborCost + materialCost + serviceCost;
+        }, 0);
+      }
 
       setStats({
-        totalClients: clientCount?.toString() || '0',
-        activeJobs: activeJobsCount?.toString() || '0',
-        pendingInvoices: `$${pendingAmount.toLocaleString()}`,
-        revenueMonth: `$${monthlyRevenue.toLocaleString()}`,
-        pendingInvoicesCount: pendingInvoices?.length || 0
+        totalClients: clientCount || 0,
+        totalJobs: jobCount || 0,
+        expectedRevenue: Math.round(expectedRevenue),
+        completedJobs: completedCount || 0
       });
     } catch (error) {
-      console.error("Error fetching dashboard stats:", error);
+      console.error('Error fetching dashboard stats:', error);
     } finally {
       setIsLoading(false);
     }
   }
 
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
-        <p className="text-muted-foreground">Get an overview of your business performance</p>
+        <p className="text-muted-foreground">Welcome back! Here's what's happening with your business.</p>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Link to="/clients" className="block no-underline">
-          <StatCard
-            title="Total Clients"
-            value={isLoading ? "Loading..." : stats.totalClients}
-            icon={<Users size={20} />}
-            trend={12}
-            trendLabel="vs. last month"
-            linkTo="/clients"
-          />
-        </Link>
-        <Link to="/jobs" className="block no-underline">
-          <StatCard
-            title="Active Jobs"
-            value={isLoading ? "Loading..." : stats.activeJobs}
-            icon={<Briefcase size={20} />}
-            trend={5}
-            trendLabel="vs. last month"
-            linkTo="/jobs"
-          />
-        </Link>
-        <Link to="/invoices" className="block no-underline">
-          <StatCard
-            title="Pending Invoices"
-            value={isLoading ? "Loading..." : stats.pendingInvoices}
-            icon={<FileText size={20} />}
-            description={`${stats.pendingInvoicesCount} invoices awaiting payment`}
-            linkTo="/invoices"
-          />
-        </Link>
-        <Link to="/payments" className="block no-underline">
-          <StatCard
-            title="Revenue (MTD)"
-            value={isLoading ? "Loading..." : stats.revenueMonth}
-            icon={<CreditCard size={20} />}
-            trend={8}
-            trendLabel="vs. last month"
-            linkTo="/payments"
-          />
-        </Link>
+        <StatCard
+          title="Total Clients"
+          value={stats.totalClients.toString()}
+          icon={<Users className="h-6 w-6 text-blue-600" />}
+          linkTo="/clients"
+        />
+        <StatCard
+          title="Active Jobs"
+          value={stats.totalJobs.toString()}
+          icon={<Briefcase className="h-6 w-6 text-green-600" />}
+          linkTo="/jobs"
+        />
+        <StatCard
+          title="Expected Revenue"
+          value={`$${stats.expectedRevenue.toLocaleString()}`}
+          icon={<DollarSign className="h-6 w-6 text-purple-600" />}
+          description="Labor + Materials + Services"
+        />
+        <StatCard
+          title="Completed Jobs"
+          value={stats.completedJobs.toString()}
+          icon={<Calendar className="h-6 w-6 text-amber-600" />}
+        />
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2">
-        <UpcomingJobsCard />
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
         <RecentClientsCard />
+        <UpcomingJobsCard />
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2">
-        <InvoiceStatusChart />
-      </div>
+      <InvoiceStatusChart />
     </div>
   );
 }

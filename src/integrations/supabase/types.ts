@@ -186,6 +186,41 @@ export type Database = {
           },
         ]
       }
+      job_notes: {
+        Row: {
+          content: string
+          created_at: string
+          created_by: string
+          id: string
+          job_id: string
+          updated_at: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          created_by: string
+          id?: string
+          job_id: string
+          updated_at?: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          job_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_notes_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       jobs: {
         Row: {
           assigned_to: string | null
@@ -196,7 +231,9 @@ export type Database = {
           created_by: string | null
           duration: number | null
           id: string
+          labor_cost: number | null
           location: string | null
+          material_cost: number | null
           notes: string | null
           scheduled_at: string | null
           status: string | null
@@ -213,7 +250,9 @@ export type Database = {
           created_by?: string | null
           duration?: number | null
           id?: string
+          labor_cost?: number | null
           location?: string | null
+          material_cost?: number | null
           notes?: string | null
           scheduled_at?: string | null
           status?: string | null
@@ -230,7 +269,9 @@ export type Database = {
           created_by?: string | null
           duration?: number | null
           id?: string
+          labor_cost?: number | null
           location?: string | null
+          material_cost?: number | null
           notes?: string | null
           scheduled_at?: string | null
           status?: string | null
@@ -316,7 +357,13 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_user_profile: {
+        Args: { user_id: string }
+        Returns: {
+          full_name: string
+          role: string
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never

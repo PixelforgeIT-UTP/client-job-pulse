@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { CalendarIcon, Clock, DollarSign, MapPin, Plus } from "lucide-react";
@@ -50,6 +51,8 @@ export function JobFormDialog({ isOpen, onClose, onSuccess, initialData }: JobFo
       location: initialData?.location || "",
       scheduled_time: initialData?.scheduled_time || "",
       duration: initialData?.duration || "",
+      labor_cost: initialData?.labor_cost || "",
+      material_cost: initialData?.material_cost || "",
     },
   });
 
@@ -115,6 +118,8 @@ export function JobFormDialog({ isOpen, onClose, onSuccess, initialData }: JobFo
         location: data.location,
         duration: data.duration,
         cost: parseFloat(calculateTotal()),
+        labor_cost: parseFloat(data.labor_cost) || 0,
+        material_cost: parseFloat(data.material_cost) || 0,
         scheduled_at: scheduledDateTime.toISOString(),
         status: initialData?.status || "scheduled",
         created_by: userId,
@@ -130,6 +135,16 @@ export function JobFormDialog({ isOpen, onClose, onSuccess, initialData }: JobFo
         if (error) throw error;
         if (!jobResult) throw new Error("Job creation failed.");
         jobId = jobResult.id;
+
+        // Add initial note if provided
+        if (data.notes && data.notes.trim()) {
+          const { error: noteError } = await supabase.from("job_notes").insert({
+            job_id: jobId,
+            content: data.notes,
+            created_by: userId,
+          });
+          if (noteError) console.error("Error creating initial note:", noteError);
+        }
       }
 
       const lineItems = items.map((item) => ({
@@ -204,9 +219,9 @@ export function JobFormDialog({ isOpen, onClose, onSuccess, initialData }: JobFo
               name="notes"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Notes</FormLabel>
+                  <FormLabel>Initial Notes</FormLabel>
                   <FormControl>
-                    <Textarea placeholder="Add internal job notes..." {...field} />
+                    <Textarea placeholder="Add initial job notes..." {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -242,6 +257,42 @@ export function JobFormDialog({ isOpen, onClose, onSuccess, initialData }: JobFo
                     </FormLabel>
                     <FormControl>
                       <Input type="text" placeholder="e.g. 2.5" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="labor_cost"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>
+                      <DollarSign className="inline mr-2 h-4 w-4" />
+                      Labor Cost
+                    </FormLabel>
+                    <FormControl>
+                      <Input type="number" step="0.01" placeholder="0.00" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="material_cost"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>
+                      <DollarSign className="inline mr-2 h-4 w-4" />
+                      Material Cost
+                    </FormLabel>
+                    <FormControl>
+                      <Input type="number" step="0.01" placeholder="0.00" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
