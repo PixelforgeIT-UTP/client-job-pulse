@@ -3,7 +3,8 @@ import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Camera } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { Camera, Send } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
@@ -18,6 +19,8 @@ export function JobPhotosDialog({ isOpen, onClose, jobId }: JobPhotosDialogProps
   const [photos, setPhotos] = useState<Array<{ url: string; name: string }>>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [newPhotos, setNewPhotos] = useState<File[]>([]);
+  const [description, setDescription] = useState("");
+  const [isSubmittingForApproval, setIsSubmittingForApproval] = useState(false);
 
   useEffect(() => {
     if (isOpen && jobId) {
@@ -92,6 +95,68 @@ export function JobPhotosDialog({ isOpen, onClose, jobId }: JobPhotosDialogProps
     }
   }
 
+  async function submitForApproval() {
+    if (newPhotos.length === 0) {
+      toast({
+        title: "No photos selected",
+        description: "Please select photos to submit for approval",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsSubmittingForApproval(true);
+    try {
+      // First upload the photos
+      const uploadedUrls = [];
+      for (const photo of newPhotos) {
+        const fileName = `${jobId}/${Date.now()}_${photo.name}`;
+        const { error: uploadError } = await supabase.storage
+          .from("job-photos")
+          .upload(fileName, photo);
+
+        if (uploadError) throw uploadError;
+
+        const { data: urlData } = supabase.storage
+          .from("job-photos")
+          .getPublicUrl(fileName);
+        
+        uploadedUrls.push(urlData.publicUrl);
+      }
+
+      // Then create approval requests
+      for (const url of uploadedUrls) {
+        const { error } = await supabase
+          .from('photo_approval_requests')
+          .insert({
+            job_id: jobId,
+            photo_url: url,
+            description: description || 'Photo submission for approval',
+            status: 'pending'
+          });
+
+        if (error) throw error;
+      }
+
+      toast({
+        title: "Photos submitted for approval",
+        description: `Successfully submitted ${newPhotos.length} photo(s) for supervisor approval`,
+      });
+
+      setNewPhotos([]);
+      setDescription("");
+      fetchPhotos();
+    } catch (error: any) {
+      toast({
+        title: "Error submitting for approval",
+        description: error.message || "An error occurred during submission",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmittingForApproval(false);
+    }
+  }
+
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-[700px]">
@@ -119,8 +184,25 @@ export function JobPhotosDialog({ isOpen, onClose, jobId }: JobPhotosDialogProps
           </div>
 
           {newPhotos.length > 0 && (
-            <div className="text-sm text-muted-foreground">
-              {newPhotos.length} new photo(s) selected
+            <div className="space-y-3">
+              <div className="text-sm text-muted-foreground">
+                {newPhotos.length} new photo(s) selected
+              </div>
+              <Textarea
+                placeholder="Add a description for supervisor approval (optional)"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                rows={2}
+              />
+              <Button 
+                onClick={submitForApproval}
+                disabled={isSubmittingForApproval || newPhotos.length === 0}
+                variant="outline"
+                className="w-full"
+              >
+                <Send className="mr-2 h-4 w-4" />
+                {isSubmittingForApproval ? "Submitting..." : "Submit for Supervisor Approval"}
+              </Button>
             </div>
           )}
 
