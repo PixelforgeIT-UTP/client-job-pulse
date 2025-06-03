@@ -254,8 +254,8 @@ export default function Jobs() {
           <JobNotesDialog
             isOpen={isNotesDialogOpen}
             onClose={() => setIsNotesDialogOpen(false)}
-            job={selectedJob}
-            onUpdate={fetchJobs}
+            jobId={selectedJob.id}
+            currentNotes={selectedJob.notes}
           />
         </>
       )}
