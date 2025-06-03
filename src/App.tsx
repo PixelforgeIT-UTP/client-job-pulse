@@ -7,9 +7,6 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import "mapbox-gl/dist/mapbox-gl.css";
 import "@mapbox/mapbox-gl-geocoder/dist/mapbox-gl-geocoder.css";
 
-
-
-
 // Auth Context
 import { AuthProvider } from "@/contexts/AuthContext";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
@@ -24,12 +21,11 @@ import Invoices from "@/pages/Invoices";
 import Payments from "@/pages/Payments";
 import Schedule from "@/pages/Schedule";
 import TimeTracking from "@/pages/TimeTracking";
+import SupervisorApproval from "@/pages/SupervisorApproval";
 import Login from "@/pages/Login";
 import NotFound from "@/pages/NotFound";
 import QuoteDetail from '@/pages/QuoteDetail';
 import NewQuote from '@/pages/NewQuote';
-
-
 
 const queryClient = new QueryClient();
 
@@ -57,6 +53,7 @@ const App = () => (
               <Route path="payments" element={<Payments />} />
               <Route path="schedule" element={<Schedule />} />
               <Route path="time-tracking" element={<TimeTracking />} />
+              <Route path="supervisor-approval" element={<SupervisorApproval />} />
               <Route path="/quotes/new" element={<NewQuote />} />
               <Route path="/quotes/:id" element={<QuoteDetail />} />
             </Route>

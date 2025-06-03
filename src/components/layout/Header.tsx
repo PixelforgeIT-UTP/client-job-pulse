@@ -9,10 +9,13 @@ export default function Header() {
   const { signOut, user } = useAuth();
 
   return (
-    <header className="bg-white shadow-sm">
-      <div className="flex h-16 items-center justify-between px-4 sm:px-6 lg:px-[24px] mx-[7px] bg-[#464c43]/0">
+    <header className="bg-gray-50 shadow-sm border-b border-gray-200">
+      <div className="flex h-16 items-center justify-between px-4 sm:px-6 lg:px-[24px] mx-[7px]">
         <div className="flex items-center gap-x-4">
-          {/* Search functionality removed */}
+          {/* Logo placeholder - will be customizable */}
+          <div className="flex items-center justify-center w-8 h-8 bg-blue-600 rounded-lg">
+            <span className="text-white font-bold text-sm">JP</span>
+          </div>
         </div>
 
         <div className="flex items-center gap-x-4">
