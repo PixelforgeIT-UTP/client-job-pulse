@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -26,6 +25,7 @@ import Login from "@/pages/Login";
 import NotFound from "@/pages/NotFound";
 import QuoteDetail from '@/pages/QuoteDetail';
 import NewQuote from '@/pages/NewQuote';
+import AdminDashboard from "@/pages/AdminDashboard";
 
 const queryClient = new QueryClient();
 
@@ -54,6 +54,7 @@ const App = () => (
               <Route path="schedule" element={<Schedule />} />
               <Route path="time-tracking" element={<TimeTracking />} />
               <Route path="supervisor-approval" element={<SupervisorApproval />} />
+              <Route path="admin-dashboard" element={<AdminDashboard />} />
               <Route path="/quotes/new" element={<NewQuote />} />
               <Route path="/quotes/:id" element={<QuoteDetail />} />
             </Route>

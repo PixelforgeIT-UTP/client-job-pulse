@@ -1,14 +1,15 @@
-
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { Users, Briefcase, FileText, CreditCard, Calendar, Clock, Home, Menu, X, Shield } from 'lucide-react';
+import { Users, Briefcase, FileText, CreditCard, Calendar, Clock, Home, Menu, X, Shield, Settings } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
 
 type NavItem = {
   name: string;
   href: string;
   icon: React.ElementType;
+  adminOnly?: boolean;
 };
 
 const navigation: NavItem[] = [{
@@ -47,11 +48,19 @@ const navigation: NavItem[] = [{
   name: 'Supervisor Approval',
   href: '/supervisor-approval',
   icon: Shield
+}, {
+  name: 'Admin Dashboard',
+  href: '/admin-dashboard',
+  icon: Settings,
+  adminOnly: true
 }];
 
 export default function Sidebar() {
   const location = useLocation();
   const [isMobileOpen, setIsMobileOpen] = useState(false);
+  const { isAdmin } = useAuth();
+
+  const filteredNavigation = navigation.filter(item => !item.adminOnly || isAdmin);
 
   return <>
       {/* Mobile menu button */}
@@ -78,7 +87,7 @@ export default function Sidebar() {
           <h1 className="text-xl font-bold text-gray-800">Job Pulse</h1>
         </div>
         <nav className="mt-5 px-2 space-y-1">
-          {navigation.map(item => (
+          {filteredNavigation.map(item => (
             <Link 
               key={item.name} 
               to={item.href} 
@@ -115,7 +124,7 @@ export default function Sidebar() {
             <ul className="flex flex-1 flex-col gap-y-6 mx-[2px] my-0 bg-inherit">
               <li>
                 <ul className="-mx-2 space-y-1">
-                  {navigation.map(item => (
+                  {filteredNavigation.map(item => (
                     <li key={item.name}>
                       <Link 
                         to={item.href} 
