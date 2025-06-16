@@ -4,13 +4,14 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/contexts/AuthContext';
 import { Navigate } from 'react-router-dom';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Clock, DollarSign, Camera, FileText, Quote, TrendingUp } from 'lucide-react';
+import { Clock, DollarSign, Camera, FileText, Quote, TrendingUp, Users } from 'lucide-react';
 import { HourTrackingCard } from '@/components/admin/HourTrackingCard';
 import { JobBudgetCard } from '@/components/admin/JobBudgetCard';
 import { PendingPhotosCard } from '@/components/admin/PendingPhotosCard';
 import { JobNotesCard } from '@/components/admin/JobNotesCard';
 import { PendingQuotesCard } from '@/components/admin/PendingQuotesCard';
 import { JobMetricsCard } from '@/components/admin/JobMetricsCard';
+import { UserManagementCard } from '@/components/admin/UserManagementCard';
 
 export default function AdminDashboard() {
   const { user, isAdmin, loading } = useAuth();
@@ -37,13 +38,14 @@ export default function AdminDashboard() {
       </div>
 
       <Tabs defaultValue="overview" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-6">
+        <TabsList className="grid w-full grid-cols-7">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="hours">Hours</TabsTrigger>
           <TabsTrigger value="budget">Budget</TabsTrigger>
           <TabsTrigger value="photos">Photos</TabsTrigger>
           <TabsTrigger value="notes">Notes</TabsTrigger>
           <TabsTrigger value="quotes">Quotes</TabsTrigger>
+          <TabsTrigger value="users">Users</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-6">
@@ -128,6 +130,10 @@ export default function AdminDashboard() {
 
         <TabsContent value="quotes">
           <PendingQuotesCard />
+        </TabsContent>
+
+        <TabsContent value="users">
+          <UserManagementCard />
         </TabsContent>
       </Tabs>
     </div>

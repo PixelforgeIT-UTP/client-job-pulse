@@ -364,6 +364,10 @@ export type Database = {
           role: string
         }[]
       }
+      update_user_role: {
+        Args: { target_user_id: string; new_role: string }
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never
