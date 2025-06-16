@@ -40,8 +40,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
   };
 
-  const checkAdminStatus = async (userId: string) => {
-    if (!userId) return;
+  const checkAdminStatus = async (userId: string): Promise<boolean> => {
+    if (!userId) return false;
 
     try {
       const { data, error } = await supabase
@@ -52,12 +52,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (error) {
         console.error('Error checking admin status:', error);
-        return;
+        return false;
       }
 
-      setIsAdmin(data?.role === 'admin');
+      const isAdmin = data?.role === 'admin';
+      setIsAdmin(isAdmin);
+      return isAdmin;
     } catch (err) {
       console.error('Failed to check admin status:', err);
+      return false;
     }
   };
 
@@ -67,11 +70,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(newSession?.user ?? null);
 
       if (event === 'SIGNED_IN' && newSession?.user) {
-        checkAdminStatus(newSession.user.id);
-
-        setTimeout(() => {
-          navigate('/');
-        }, 0);
+        checkAdminStatus(newSession.user.id).then((isAdmin) => {
+          setTimeout(() => {
+            navigate(isAdmin ? '/admin-dashboard' : '/');
+          }, 0);
+        });
       } else if (event === 'SIGNED_OUT') {
         setIsAdmin(false);
         navigate('/login');
