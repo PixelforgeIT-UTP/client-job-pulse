@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -39,7 +38,8 @@ export default function SupervisorApproval() {
   const fetchPhotoRequests = async () => {
     setIsLoading(true);
     try {
-      const { data, error } = await supabase
+      // Using type assertion to work around missing types
+      const { data, error } = await (supabase as any)
         .from('photo_approval_requests')
         .select(`
           *,
@@ -54,7 +54,7 @@ export default function SupervisorApproval() {
 
       // Fetch user profiles for each request
       const requestsWithProfiles = await Promise.all(
-        (data || []).map(async (request) => {
+        (data || []).map(async (request: any) => {
           try {
             const { data: profile } = await supabase
               .rpc('get_user_profile', { user_id: request.created_by });
@@ -84,7 +84,8 @@ export default function SupervisorApproval() {
 
   const handleApproval = async (requestId: string, status: 'approved' | 'rejected') => {
     try {
-      const { error } = await supabase
+      // Using type assertion to work around missing types
+      const { error } = await (supabase as any)
         .from('photo_approval_requests')
         .update({ status })
         .eq('id', requestId);
