@@ -16,6 +16,13 @@ type AuthContextType = {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+type Profile = {
+  id: string;
+  full_name?: string;
+  role: 'admin' | 'tech' | 'manager';
+  created_at?: string;
+};
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
@@ -24,7 +31,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  // Clean up authentication state to prevent "limbo" states
   const cleanupAuthState = () => {
     localStorage.removeItem('supabase.auth.token');
     Object.keys(localStorage).forEach((key) => {
@@ -34,22 +40,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
   };
 
-  // Check if the current user is an admin
   const checkAdminStatus = async (userId: string) => {
     if (!userId) return;
-    
+
     try {
       const { data, error } = await supabase
         .from('profiles')
         .select('role')
         .eq('id', userId)
-        .single();
-      
+        .single<Profile>();
+
       if (error) {
         console.error('Error checking admin status:', error);
         return;
       }
-      
+
       setIsAdmin(data?.role === 'admin');
     } catch (err) {
       console.error('Failed to check admin status:', err);
@@ -57,15 +62,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
-    // Set up auth state listener first
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, newSession) => {
       setSession(newSession);
       setUser(newSession?.user ?? null);
-      
+
       if (event === 'SIGNED_IN' && newSession?.user) {
         checkAdminStatus(newSession.user.id);
-        
-        // Defer data fetching to prevent deadlocks
+
         setTimeout(() => {
           navigate('/');
         }, 0);
@@ -75,17 +78,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     });
 
-    // Then check for existing session
     supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
       setSession(currentSession);
       setUser(currentSession?.user ?? null);
-      
+
       if (currentSession?.user) {
         checkAdminStatus(currentSession.user.id);
       }
-      
+
       setLoading(false);
-      
+
       if (!currentSession) {
         navigate('/login');
       }
@@ -99,19 +101,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signIn = async (email: string, password: string) => {
     try {
       setLoading(true);
-      
-      // Clean up existing state
       cleanupAuthState();
-      
-      // Attempt global sign out
+
       try {
         await supabase.auth.signOut({ scope: 'global' });
-      } catch (err) {
-        // Continue even if this fails
-      }
-      
+      } catch {}
+
       const { error } = await supabase.auth.signInWithPassword({ email, password });
-      
+
       if (error) {
         throw error;
       }
@@ -130,16 +127,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signUp = async (email: string, password: string) => {
     try {
       setLoading(true);
-      
-      // Clean up existing state
       cleanupAuthState();
-      
+
       const { error } = await supabase.auth.signUp({ email, password });
-      
+
       if (error) {
         throw error;
       }
-      
+
       toast({
         title: "Account created",
         description: "Please check your email to confirm your account",
@@ -159,14 +154,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signOut = async () => {
     try {
       setLoading(true);
-      
-      // Clean up auth state
       cleanupAuthState();
-      
-      // Attempt global sign out
       await supabase.auth.signOut({ scope: 'global' });
-      
-      // Force page reload for a clean state
       window.location.href = '/login';
     } catch (error: any) {
       toast({
