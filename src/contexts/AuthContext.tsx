@@ -1,4 +1,3 @@
-
 import { createContext, useContext, useEffect, useState } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { useNavigate } from 'react-router-dom';
@@ -58,7 +57,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return null;
       }
 
-      return data;
+      return data as Profile;
     } catch (err) {
       console.error('Failed to fetch profile:', err);
       return null;
