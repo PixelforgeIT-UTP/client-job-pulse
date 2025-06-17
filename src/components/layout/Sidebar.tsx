@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
@@ -9,10 +10,9 @@ type NavItem = {
   name: string;
   href: string;
   icon: React.ElementType;
-  adminOnly?: boolean;
 };
 
-const navigation: NavItem[] = [{
+const userNavigation: NavItem[] = [{
   name: 'Dashboard',
   href: '/',
   icon: Home
@@ -48,11 +48,12 @@ const navigation: NavItem[] = [{
   name: 'Supervisor Approval',
   href: '/supervisor-approval',
   icon: Shield
-}, {
-  name: 'Admin Dashboard',
+}];
+
+const adminNavigation: NavItem[] = [{
+  name: 'Admin Console',
   href: '/admin-dashboard',
-  icon: Settings,
-  adminOnly: true
+  icon: Settings
 }];
 
 export default function Sidebar() {
@@ -60,7 +61,7 @@ export default function Sidebar() {
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const { isAdmin } = useAuth();
 
-  const filteredNavigation = navigation.filter(item => !item.adminOnly || isAdmin);
+  const navigation = isAdmin ? adminNavigation : userNavigation;
 
   return <>
       {/* Mobile menu button */}
@@ -87,7 +88,7 @@ export default function Sidebar() {
           <h1 className="text-xl font-bold text-gray-800">Job Pulse</h1>
         </div>
         <nav className="mt-5 px-2 space-y-1">
-          {filteredNavigation.map(item => (
+          {navigation.map(item => (
             <Link 
               key={item.name} 
               to={item.href} 
@@ -124,7 +125,7 @@ export default function Sidebar() {
             <ul className="flex flex-1 flex-col gap-y-6 mx-[2px] my-0 bg-inherit">
               <li>
                 <ul className="-mx-2 space-y-1">
-                  {filteredNavigation.map(item => (
+                  {navigation.map(item => (
                     <li key={item.name}>
                       <Link 
                         to={item.href} 

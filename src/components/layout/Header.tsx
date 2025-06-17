@@ -2,20 +2,31 @@
 import { Bell, LogOut, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 
 export default function Header() {
-  const { signOut, user } = useAuth();
+  const { signOut, user, isAdmin } = useAuth();
+
+  const handleProfileClick = () => {
+    if (!isAdmin) {
+      // For non-admin users, show a message or do nothing
+      console.log('Profile functionality coming soon');
+    }
+  };
+
+  const handleSettingsClick = () => {
+    if (!isAdmin) {
+      // For non-admin users, show a message or do nothing
+      console.log('Settings functionality coming soon');
+    }
+  };
 
   return (
     <header className="bg-gray-50 shadow-sm border-b border-gray-200">
       <div className="flex h-16 items-center justify-between px-4 sm:px-6 lg:px-[24px] mx-[7px]">
         <div className="flex items-center gap-x-4">
-          {/* Logo placeholder - will be customizable */}
-          <div className="flex items-center justify-center w-8 h-8 bg-blue-600 rounded-lg">
-            <span className="text-white font-bold text-sm">JP</span>
-          </div>
+          {/* Company name only */}
+          <h2 className="text-lg font-semibold text-gray-800">Job Pulse</h2>
         </div>
 
         <div className="flex items-center gap-x-4">
@@ -36,12 +47,25 @@ export default function Header() {
                 {user?.email || 'My Account'}
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem asChild>
-                <Link to="/profile">Profile</Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link to="/settings">Settings</Link>
-              </DropdownMenuItem>
+              {isAdmin ? (
+                <>
+                  <DropdownMenuItem onClick={handleProfileClick}>
+                    Profile
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleSettingsClick}>
+                    Settings
+                  </DropdownMenuItem>
+                </>
+              ) : (
+                <>
+                  <DropdownMenuItem onClick={handleProfileClick} disabled>
+                    Profile (Coming Soon)
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleSettingsClick} disabled>
+                    Settings (Coming Soon)
+                  </DropdownMenuItem>
+                </>
+              )}
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => signOut()}>
                 <LogOut className="mr-2 h-4 w-4" />

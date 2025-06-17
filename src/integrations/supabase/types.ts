@@ -364,6 +364,10 @@ export type Database = {
           role: string
         }[]
       }
+      jwt_custom_claims: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
       update_user_role: {
         Args: { target_user_id: string; new_role: string }
         Returns: undefined

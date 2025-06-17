@@ -15,6 +15,7 @@ import { UserManagementCard } from '@/components/admin/UserManagementCard';
 
 export default function AdminDashboard() {
   const { user, isAdmin, loading } = useAuth();
+  const [activeTab, setActiveTab] = useState('overview');
 
   if (loading) {
     return (
@@ -28,6 +29,10 @@ export default function AdminDashboard() {
     return <Navigate to="/" replace />;
   }
 
+  const handleMetricCardClick = (tabName: string) => {
+    setActiveTab(tabName);
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -37,7 +42,7 @@ export default function AdminDashboard() {
         </p>
       </div>
 
-      <Tabs defaultValue="overview" className="space-y-6">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <TabsList className="grid w-full grid-cols-7">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="hours">Hours</TabsTrigger>
@@ -50,7 +55,10 @@ export default function AdminDashboard() {
 
         <TabsContent value="overview" className="space-y-6">
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            <Card>
+            <Card 
+              className="cursor-pointer hover:shadow-md transition-shadow"
+              onClick={() => handleMetricCardClick('hours')}
+            >
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Active Jobs</CardTitle>
                 <Clock className="h-4 w-4 text-muted-foreground" />
@@ -60,7 +68,10 @@ export default function AdminDashboard() {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card 
+              className="cursor-pointer hover:shadow-md transition-shadow"
+              onClick={() => handleMetricCardClick('budget')}
+            >
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
                 <DollarSign className="h-4 w-4 text-muted-foreground" />
@@ -70,7 +81,10 @@ export default function AdminDashboard() {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card 
+              className="cursor-pointer hover:shadow-md transition-shadow"
+              onClick={() => handleMetricCardClick('hours')}
+            >
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Avg Job Duration</CardTitle>
                 <TrendingUp className="h-4 w-4 text-muted-foreground" />
@@ -80,7 +94,10 @@ export default function AdminDashboard() {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card 
+              className="cursor-pointer hover:shadow-md transition-shadow"
+              onClick={() => handleMetricCardClick('photos')}
+            >
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Pending Photos</CardTitle>
                 <Camera className="h-4 w-4 text-muted-foreground" />
@@ -90,7 +107,10 @@ export default function AdminDashboard() {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card 
+              className="cursor-pointer hover:shadow-md transition-shadow"
+              onClick={() => handleMetricCardClick('quotes')}
+            >
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Pending Quotes</CardTitle>
                 <Quote className="h-4 w-4 text-muted-foreground" />
@@ -100,7 +120,10 @@ export default function AdminDashboard() {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card 
+              className="cursor-pointer hover:shadow-md transition-shadow"
+              onClick={() => handleMetricCardClick('hours')}
+            >
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Total Hours</CardTitle>
                 <FileText className="h-4 w-4 text-muted-foreground" />
