@@ -69,12 +69,18 @@ export default function Profile() {
     try {
       const fullName = `${firstName} ${lastName}`.trim();
       
+      const updateData: any = {
+        full_name: fullName
+      };
+
+      // Only include avatar_url if it's not empty
+      if (avatarUrl) {
+        updateData.avatar_url = avatarUrl;
+      }
+
       const { error } = await supabase
         .from('profiles')
-        .update({
-          full_name: fullName,
-          avatar_url: avatarUrl
-        })
+        .update(updateData)
         .eq('id', user.id);
 
       if (error) throw error;

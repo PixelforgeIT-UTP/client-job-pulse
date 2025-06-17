@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -123,15 +124,16 @@ export function JobPhotosDialog({ isOpen, onClose, jobId }: JobPhotosDialogProps
         uploadedUrls.push(urlData.publicUrl);
       }
 
-      // Then create approval requests - using type assertion to work around missing types
+      // Then create approval requests
       for (const url of uploadedUrls) {
-        const { error } = await (supabase as any)
+        const { error } = await supabase
           .from('photo_approval_requests')
           .insert({
             job_id: jobId,
             photo_url: url,
             description: description || 'Photo submission for approval',
-            status: 'pending'
+            status: 'pending',
+            created_by: (await supabase.auth.getUser()).data.user?.id
           });
 
         if (error) throw error;

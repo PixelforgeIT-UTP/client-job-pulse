@@ -12,9 +12,8 @@ type UserProfile = {
   id: string;
   full_name: string | null;
   role: string | null;
-  email: string;
   created_at: string;
-  last_sign_in_at: string | null;
+  avatar_url: string | null;
 };
 
 export function UserManagementCard() {
@@ -30,7 +29,6 @@ export function UserManagementCard() {
   const fetchUsers = async () => {
     setIsLoading(true);
     try {
-      // Get all profiles with user data
       const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
         .select('*')
@@ -38,35 +36,7 @@ export function UserManagementCard() {
 
       if (profilesError) throw profilesError;
 
-      // Get corresponding auth user data
-      const usersWithAuth = await Promise.all(
-        (profiles || []).map(async (profile) => {
-          try {
-            // Use RPC function to get user data safely
-            const { data: authData } = await supabase.auth.admin.getUserById(profile.id);
-            return {
-              id: profile.id,
-              full_name: profile.full_name,
-              role: profile.role,
-              email: authData.user?.email || 'Unknown',
-              created_at: profile.created_at || '',
-              last_sign_in_at: authData.user?.last_sign_in_at || null
-            };
-          } catch (error) {
-            console.error('Error fetching auth data for user:', profile.id, error);
-            return {
-              id: profile.id,
-              full_name: profile.full_name,
-              role: profile.role,
-              email: 'Unknown',
-              created_at: profile.created_at || '',
-              last_sign_in_at: null
-            };
-          }
-        })
-      );
-
-      setUsers(usersWithAuth);
+      setUsers(profiles || []);
     } catch (error) {
       console.error('Error fetching users:', error);
       toast({
@@ -94,7 +64,6 @@ export function UserManagementCard() {
         description: "User role updated successfully",
       });
 
-      // Refresh the users list
       await fetchUsers();
     } catch (error: any) {
       console.error('Error updating user role:', error);
@@ -133,9 +102,7 @@ export function UserManagementCard() {
           <TableHeader>
             <TableRow>
               <TableHead>Name</TableHead>
-              <TableHead>Email</TableHead>
               <TableHead>Current Role</TableHead>
-              <TableHead>Last Sign In</TableHead>
               <TableHead>Joined</TableHead>
               <TableHead>Actions</TableHead>
             </TableRow>
@@ -146,7 +113,6 @@ export function UserManagementCard() {
                 <TableCell className="font-medium">
                   {user.full_name || 'No name set'}
                 </TableCell>
-                <TableCell>{user.email}</TableCell>
                 <TableCell>
                   <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                     user.role === 'admin' 
@@ -155,12 +121,6 @@ export function UserManagementCard() {
                   }`}>
                     {user.role || 'tech'}
                   </span>
-                </TableCell>
-                <TableCell>
-                  {user.last_sign_in_at 
-                    ? format(new Date(user.last_sign_in_at), 'MMM d, yyyy')
-                    : 'Never'
-                  }
                 </TableCell>
                 <TableCell>
                   {format(new Date(user.created_at), 'MMM d, yyyy')}
@@ -177,6 +137,7 @@ export function UserManagementCard() {
                     <SelectContent>
                       <SelectItem value="tech">Tech</SelectItem>
                       <SelectItem value="admin">Admin</SelectItem>
+                      <SelectItem value="manager">Manager</SelectItem>
                     </SelectContent>
                   </Select>
                 </TableCell>

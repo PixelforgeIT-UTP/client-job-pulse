@@ -1,336 +1,324 @@
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import { Play, Pause, StopCircle } from 'lucide-react';
-import { format } from 'date-fns';
-import { useToast } from '@/hooks/use-toast';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Badge } from '@/components/ui/badge';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Play, Square, Clock } from 'lucide-react';
+import { JobSelector } from '@/components/time-tracking/JobSelector';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/components/ui/use-toast';
 
-type TimeEntry = {
+interface TimeEntry {
   id: string;
-  jobName: string;
-  startTime: Date;
-  endTime: Date | null;
-  duration: number; // in seconds
-};
+  job_title: string;
+  start_time: string;
+  end_time?: string;
+  duration?: number;
+  notes?: string;
+  is_active: boolean;
+}
 
 export default function TimeTracking() {
+  const { user } = useAuth();
   const { toast } = useToast();
-  const [isTimerRunning, setIsTimerRunning] = useState(false);
-  const [currentJobName, setCurrentJobName] = useState('');
-  const [elapsedTime, setElapsedTime] = useState(0);
+  const [selectedJobId, setSelectedJobId] = useState('');
+  const [notes, setNotes] = useState('');
+  const [activeEntry, setActiveEntry] = useState<TimeEntry | null>(null);
   const [timeEntries, setTimeEntries] = useState<TimeEntry[]>([]);
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
-  const startTimeRef = useRef<Date | null>(null);
+  const [currentTime, setCurrentTime] = useState(new Date());
 
   useEffect(() => {
-    // Load time entries from localStorage
-    const savedEntries = localStorage.getItem('timeEntries');
-    if (savedEntries) {
-      try {
-        const parsed = JSON.parse(savedEntries);
-        // Convert string dates back to Date objects
-        const entries = parsed.map((entry: any) => ({
-          ...entry,
-          startTime: new Date(entry.startTime),
-          endTime: entry.endTime ? new Date(entry.endTime) : null
-        }));
-        setTimeEntries(entries);
-      } catch (error) {
-        console.error('Error parsing saved time entries:', error);
-      }
-    }
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000);
 
-    // Load current timer state
-    const savedTimerState = localStorage.getItem('currentTimerState');
-    if (savedTimerState) {
-      try {
-        const { isRunning, jobName, startTime } = JSON.parse(savedTimerState);
-        if (isRunning && startTime) {
-          setIsTimerRunning(true);
-          setCurrentJobName(jobName || '');
-          startTimeRef.current = new Date(startTime);
-          
-          // Calculate elapsed time since the timer was started
-          const now = new Date();
-          const startDate = new Date(startTime);
-          const elapsedSeconds = Math.floor((now.getTime() - startDate.getTime()) / 1000);
-          setElapsedTime(elapsedSeconds);
-          
-          // Start the timer
-          startTimer();
-        }
-      } catch (error) {
-        console.error('Error parsing saved timer state:', error);
-      }
-    }
-
-    return () => {
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-      }
-    };
+    return () => clearInterval(timer);
   }, []);
 
-  const startTimer = () => {
-    if (timerRef.current) {
-      clearInterval(timerRef.current);
+  useEffect(() => {
+    if (user) {
+      fetchTimeEntries();
+      checkActiveEntry();
     }
-    
-    timerRef.current = setInterval(() => {
-      setElapsedTime(prevTime => prevTime + 1);
-    }, 1000);
+  }, [user]);
+
+  const fetchTimeEntries = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('time_entries')
+        .select(`
+          *,
+          jobs (title)
+        `)
+        .eq('user_id', user?.id)
+        .order('start_time', { ascending: false })
+        .limit(10);
+
+      if (error) throw error;
+
+      const entriesWithJobTitles = (data || []).map((entry: any) => ({
+        id: entry.id,
+        job_title: entry.jobs?.title || 'Unknown Job',
+        start_time: entry.start_time,
+        end_time: entry.end_time,
+        duration: entry.duration,
+        notes: entry.notes,
+        is_active: !entry.end_time
+      }));
+
+      setTimeEntries(entriesWithJobTitles);
+    } catch (error) {
+      console.error('Error fetching time entries:', error);
+    }
   };
 
-  const handleStartTimer = (jobName: string) => {
-    if (!jobName.trim()) {
+  const checkActiveEntry = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('time_entries')
+        .select(`
+          *,
+          jobs (title)
+        `)
+        .eq('user_id', user?.id)
+        .is('end_time', null)
+        .single();
+
+      if (error && error.code !== 'PGRST116') throw error;
+
+      if (data) {
+        setActiveEntry({
+          id: data.id,
+          job_title: data.jobs?.title || 'Unknown Job',
+          start_time: data.start_time,
+          notes: data.notes,
+          is_active: true
+        });
+      }
+    } catch (error) {
+      console.error('Error checking active entry:', error);
+    }
+  };
+
+  const startTimer = async () => {
+    if (!selectedJobId) {
       toast({
-        title: 'Error',
-        description: 'Please enter a job name',
-        variant: 'destructive',
+        title: "No job selected",
+        description: "Please select a job before starting the timer",
+        variant: "destructive",
       });
       return;
     }
 
-    const now = new Date();
-    startTimeRef.current = now;
-    setCurrentJobName(jobName);
-    setElapsedTime(0);
-    setIsTimerRunning(true);
-    
-    startTimer();
-    
-    // Save current timer state
-    localStorage.setItem('currentTimerState', JSON.stringify({
-      isRunning: true,
-      jobName,
-      startTime: now.toISOString()
-    }));
+    try {
+      const { data, error } = await supabase
+        .from('time_entries')
+        .insert({
+          job_id: selectedJobId,
+          user_id: user?.id,
+          start_time: new Date().toISOString(),
+          notes: notes || null
+        })
+        .select(`
+          *,
+          jobs (title)
+        `)
+        .single();
 
-    toast({
-      title: 'Timer Started',
-      description: `Started tracking time for "${jobName}"`,
-    });
-  };
+      if (error) throw error;
 
-  const handlePauseResumeTimer = () => {
-    if (isTimerRunning) {
-      // Pause the timer
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-        timerRef.current = null;
-      }
-      
-      // Save paused state
-      localStorage.setItem('currentTimerState', JSON.stringify({
-        isRunning: false,
-        jobName: currentJobName,
-        startTime: startTimeRef.current?.toISOString(),
-        elapsedTime
-      }));
-      
-      toast({
-        title: 'Timer Paused',
-        description: `Paused tracking time for "${currentJobName}"`,
+      setActiveEntry({
+        id: data.id,
+        job_title: data.jobs?.title || 'Unknown Job',
+        start_time: data.start_time,
+        notes: data.notes,
+        is_active: true
       });
-    } else {
-      // Resume the timer
-      startTimer();
-      
-      // Save resumed state
-      localStorage.setItem('currentTimerState', JSON.stringify({
-        isRunning: true,
-        jobName: currentJobName,
-        startTime: startTimeRef.current?.toISOString(),
-        elapsedTime
-      }));
-      
+
+      setNotes('');
+      setSelectedJobId('');
+
       toast({
-        title: 'Timer Resumed',
-        description: `Resumed tracking time for "${currentJobName}"`,
+        title: "Timer started",
+        description: "Time tracking has begun for the selected job",
+      });
+
+      fetchTimeEntries();
+    } catch (error: any) {
+      toast({
+        title: "Error starting timer",
+        description: error.message || "Failed to start time tracking",
+        variant: "destructive",
       });
     }
-    
-    setIsTimerRunning(!isTimerRunning);
   };
 
-  const handleStopTimer = () => {
-    if (timerRef.current) {
-      clearInterval(timerRef.current);
-      timerRef.current = null;
+  const stopTimer = async () => {
+    if (!activeEntry) return;
+
+    try {
+      const endTime = new Date().toISOString();
+      const startTime = new Date(activeEntry.start_time);
+      const duration = Math.round((new Date().getTime() - startTime.getTime()) / 1000 / 60); // duration in minutes
+
+      const { error } = await supabase
+        .from('time_entries')
+        .update({
+          end_time: endTime,
+          duration: duration
+        })
+        .eq('id', activeEntry.id);
+
+      if (error) throw error;
+
+      setActiveEntry(null);
+
+      toast({
+        title: "Timer stopped",
+        description: `Tracked ${duration} minutes for this job`,
+      });
+
+      fetchTimeEntries();
+    } catch (error: any) {
+      toast({
+        title: "Error stopping timer",
+        description: error.message || "Failed to stop time tracking",
+        variant: "destructive",
+      });
     }
-    
-    if (startTimeRef.current) {
-      const newEntry: TimeEntry = {
-        id: Date.now().toString(),
-        jobName: currentJobName,
-        startTime: startTimeRef.current,
-        endTime: new Date(),
-        duration: elapsedTime
-      };
-      
-      const updatedEntries = [...timeEntries, newEntry];
-      setTimeEntries(updatedEntries);
-      
-      // Save to localStorage
-      localStorage.setItem('timeEntries', JSON.stringify(updatedEntries));
-      
-      // Clear current timer state
-      localStorage.removeItem('currentTimerState');
-    }
-    
-    setIsTimerRunning(false);
-    setElapsedTime(0);
-    startTimeRef.current = null;
-    
-    toast({
-      title: 'Timer Stopped',
-      description: `Saved time entry for "${currentJobName}"`,
-    });
   };
 
-  const formatTimeDisplay = (seconds: number) => {
-    const hours = Math.floor(seconds / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
-    const secs = seconds % 60;
-    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  const formatDuration = (minutes: number) => {
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    return `${hours}h ${mins}m`;
   };
 
-  const formatDuration = (seconds: number) => {
-    const hours = Math.floor(seconds / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
-    return `${hours}h ${minutes}m`;
+  const getCurrentDuration = () => {
+    if (!activeEntry) return '0h 0m';
+    const startTime = new Date(activeEntry.start_time);
+    const duration = Math.round((currentTime.getTime() - startTime.getTime()) / 1000 / 60);
+    return formatDuration(duration);
   };
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Time Tracking</h1>
-        <p className="text-muted-foreground">Track time spent on jobs</p>
+        <p className="text-muted-foreground">Track time spent on jobs and tasks.</p>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Timer</CardTitle>
-          <CardDescription>Track your work time</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <div className="flex flex-col sm:flex-row gap-4">
-              <div className="flex-1">
-                <input
-                  type="text"
-                  className="w-full px-3 py-2 border rounded-md"
-                  placeholder="Enter job name"
-                  value={currentJobName}
-                  onChange={(e) => setCurrentJobName(e.target.value)}
-                  disabled={isTimerRunning}
-                />
-              </div>
-              <div className="flex gap-2">
-                {!isTimerRunning && !elapsedTime ? (
-                  <Button
-                    onClick={() => handleStartTimer(currentJobName)}
-                    className="flex-1 sm:flex-none"
-                  >
-                    <Play className="mr-2 h-4 w-4" />
-                    Start Timer
-                  </Button>
-                ) : (
-                  <>
-                    <Button
-                      onClick={handlePauseResumeTimer}
-                      variant="outline"
-                    >
-                      {isTimerRunning ? (
-                        <>
-                          <Pause className="mr-2 h-4 w-4" />
-                          Pause
-                        </>
-                      ) : (
-                        <>
-                          <Play className="mr-2 h-4 w-4" />
-                          Resume
-                        </>
+      <div className="grid gap-6 md:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Clock className="h-5 w-5" />
+              Current Timer
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {activeEntry ? (
+              <div className="space-y-4">
+                <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-semibold text-green-800">{activeEntry.job_title}</p>
+                      <p className="text-sm text-green-600">
+                        Started: {new Date(activeEntry.start_time).toLocaleTimeString()}
+                      </p>
+                      {activeEntry.notes && (
+                        <p className="text-sm text-green-600 mt-1">{activeEntry.notes}</p>
                       )}
-                    </Button>
-                    <Button
-                      onClick={handleStopTimer}
-                      variant="destructive"
-                    >
-                      <StopCircle className="mr-2 h-4 w-4" />
-                      Stop
-                    </Button>
-                  </>
-                )}
-              </div>
-            </div>
-            <div className="text-center py-6">
-              <div className="text-4xl font-mono">
-                {formatTimeDisplay(elapsedTime)}
-              </div>
-              {startTimeRef.current && (
-                <div className="text-sm text-muted-foreground mt-2">
-                  Started at {format(startTimeRef.current, 'h:mm a')}
+                    </div>
+                    <Badge variant="secondary" className="bg-green-100 text-green-800">
+                      {getCurrentDuration()}
+                    </Badge>
+                  </div>
                 </div>
-              )}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+                <Button onClick={stopTimer} className="w-full" variant="destructive">
+                  <Square className="mr-2 h-4 w-4" />
+                  Stop Timer
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="job">Select Job</Label>
+                  <JobSelector
+                    value={selectedJobId}
+                    onValueChange={setSelectedJobId}
+                    placeholder="Choose an active job"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="notes">Notes (Optional)</Label>
+                  <Textarea
+                    id="notes"
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    placeholder="Add any notes about this time entry..."
+                    rows={3}
+                  />
+                </div>
+                <Button onClick={startTimer} className="w-full" disabled={!selectedJobId}>
+                  <Play className="mr-2 h-4 w-4" />
+                  Start Timer
+                </Button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Time Entries</CardTitle>
-          <CardDescription>Recent tracked time</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {timeEntries.length > 0 ? (
-            <div className="rounded-md border">
+        <Card>
+          <CardHeader>
+            <CardTitle>Recent Time Entries</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {timeEntries.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                No time entries found
+              </div>
+            ) : (
               <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>Job</TableHead>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Start Time</TableHead>
-                    <TableHead>End Time</TableHead>
                     <TableHead>Duration</TableHead>
+                    <TableHead>Status</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {[...timeEntries].reverse().map((entry) => (
+                  {timeEntries.map((entry) => (
                     <TableRow key={entry.id}>
-                      <TableCell className="font-medium">{entry.jobName}</TableCell>
-                      <TableCell>{format(entry.startTime, 'MM/dd/yyyy')}</TableCell>
-                      <TableCell>{format(entry.startTime, 'h:mm a')}</TableCell>
-                      <TableCell>{entry.endTime ? format(entry.endTime, 'h:mm a') : 'In progress'}</TableCell>
-                      <TableCell>{formatDuration(entry.duration)}</TableCell>
+                      <TableCell>
+                        <div>
+                          <p className="font-medium">{entry.job_title}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {new Date(entry.start_time).toLocaleDateString()}
+                          </p>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {entry.duration ? formatDuration(entry.duration) : getCurrentDuration()}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={entry.is_active ? "default" : "secondary"}>
+                          {entry.is_active ? "Active" : "Completed"}
+                        </Badge>
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
               </Table>
-            </div>
-          ) : (
-            <div className="text-center py-8">
-              <p className="text-muted-foreground">No time entries recorded yet</p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+            )}
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
