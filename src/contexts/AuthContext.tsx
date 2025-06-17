@@ -1,31 +1,36 @@
+
 import { createContext, useContext, useEffect, useState } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/components/ui/use-toast';
 
+type Profile = {
+  id: string;
+  full_name?: string;
+  avatar_url?: string;
+  role: 'admin' | 'tech' | 'manager';
+  created_at?: string;
+};
+
 type AuthContextType = {
   session: Session | null;
   user: User | null;
+  userProfile: Profile | null;
   loading: boolean;
   isAdmin: boolean;
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
+  refreshProfile: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-type Profile = {
-  id: string;
-  full_name?: string;
-  role: 'admin' | 'tech' | 'manager';
-  created_at?: string;
-};
-
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
+  const [userProfile, setUserProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
   const navigate = useNavigate();
@@ -40,24 +45,45 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
   };
 
+  const fetchProfile = async (userId: string): Promise<Profile | null> => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
+
+      if (error) {
+        console.error('Error fetching profile:', error);
+        return null;
+      }
+
+      return data;
+    } catch (err) {
+      console.error('Failed to fetch profile:', err);
+      return null;
+    }
+  };
+
+  const refreshProfile = async () => {
+    if (!user) return;
+    const profile = await fetchProfile(user.id);
+    setUserProfile(profile);
+    setIsAdmin(profile?.role === 'admin');
+  };
+
   const checkAdminStatus = async (userId: string): Promise<boolean> => {
     if (!userId) return false;
 
     try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('id', userId)
-        .single<Profile>();
-
-      if (error) {
-        console.error('Error checking admin status:', error);
-        return false;
+      const profile = await fetchProfile(userId);
+      if (profile) {
+        setUserProfile(profile);
+        const isAdminUser = profile.role === 'admin';
+        setIsAdmin(isAdminUser);
+        return isAdminUser;
       }
-
-      const isAdmin = data?.role === 'admin';
-      setIsAdmin(isAdmin);
-      return isAdmin;
+      return false;
     } catch (err) {
       console.error('Failed to check admin status:', err);
       return false;
@@ -77,6 +103,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         });
       } else if (event === 'SIGNED_OUT') {
         setIsAdmin(false);
+        setUserProfile(null);
         navigate('/login');
       }
     });
@@ -172,7 +199,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ session, user, loading, isAdmin, signIn, signUp, signOut }}>
+    <AuthContext.Provider value={{ 
+      session, 
+      user, 
+      userProfile,
+      loading, 
+      isAdmin, 
+      signIn, 
+      signUp, 
+      signOut,
+      refreshProfile
+    }}>
       {children}
     </AuthContext.Provider>
   );
