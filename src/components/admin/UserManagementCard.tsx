@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -30,7 +31,7 @@ export function UserManagementCard() {
     try {
       const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
-        .select('id, full_name, role, created_at, avatar_url')
+        .select('id, full_name, role, created_at')
         .order('created_at', { ascending: false });
 
       if (profilesError) throw profilesError;
