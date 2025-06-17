@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -20,7 +21,8 @@ import Invoices from "@/pages/Invoices";
 import Payments from "@/pages/Payments";
 import Schedule from "@/pages/Schedule";
 import TimeTracking from "@/pages/TimeTracking";
-import SupervisorApproval from "@/pages/SupervisorApproval";
+import Profile from "@/pages/Profile";
+import Settings from "@/pages/Settings";
 import Login from "@/pages/Login";
 import NotFound from "@/pages/NotFound";
 import QuoteDetail from '@/pages/QuoteDetail';
@@ -53,7 +55,8 @@ const App = () => (
               <Route path="payments" element={<Payments />} />
               <Route path="schedule" element={<Schedule />} />
               <Route path="time-tracking" element={<TimeTracking />} />
-              <Route path="supervisor-approval" element={<SupervisorApproval />} />
+              <Route path="profile" element={<Profile />} />
+              <Route path="settings" element={<Settings />} />
               <Route path="admin-dashboard" element={<AdminDashboard />} />
               <Route path="/quotes/new" element={<NewQuote />} />
               <Route path="/quotes/:id" element={<QuoteDetail />} />

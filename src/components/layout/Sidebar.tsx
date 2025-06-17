@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { Users, Briefcase, FileText, CreditCard, Calendar, Clock, Home, Menu, X, Shield, Settings } from 'lucide-react';
+import { Users, Briefcase, FileText, CreditCard, Calendar, Clock, Home, Menu, X, Settings } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 
 type NavItem = {
@@ -44,10 +44,6 @@ const userNavigation: NavItem[] = [{
   name: 'Time Tracking',
   href: '/time-tracking',
   icon: Clock
-}, {
-  name: 'Supervisor Approval',
-  href: '/supervisor-approval',
-  icon: Shield
 }];
 
 const adminNavigation: NavItem[] = [{
