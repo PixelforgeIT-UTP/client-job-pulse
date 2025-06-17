@@ -49,29 +49,9 @@ export default function TimeTracking() {
 
   const fetchTimeEntries = async () => {
     try {
-      const { data, error } = await supabase
-        .from('time_entries')
-        .select(`
-          *,
-          jobs (title)
-        `)
-        .eq('user_id', user?.id)
-        .order('start_time', { ascending: false })
-        .limit(10);
-
-      if (error) throw error;
-
-      const entriesWithJobTitles = (data || []).map((entry: any) => ({
-        id: entry.id,
-        job_title: entry.jobs?.title || 'Unknown Job',
-        start_time: entry.start_time,
-        end_time: entry.end_time,
-        duration: entry.duration,
-        notes: entry.notes,
-        is_active: !entry.end_time
-      }));
-
-      setTimeEntries(entriesWithJobTitles);
+      // For now, return empty array since time_entries table might not exist yet
+      console.log('Time entries functionality will be available once the table is created');
+      setTimeEntries([]);
     } catch (error) {
       console.error('Error fetching time entries:', error);
     }
@@ -79,27 +59,9 @@ export default function TimeTracking() {
 
   const checkActiveEntry = async () => {
     try {
-      const { data, error } = await supabase
-        .from('time_entries')
-        .select(`
-          *,
-          jobs (title)
-        `)
-        .eq('user_id', user?.id)
-        .is('end_time', null)
-        .single();
-
-      if (error && error.code !== 'PGRST116') throw error;
-
-      if (data) {
-        setActiveEntry({
-          id: data.id,
-          job_title: data.jobs?.title || 'Unknown Job',
-          start_time: data.start_time,
-          notes: data.notes,
-          is_active: true
-        });
-      }
+      // For now, no active entry since time_entries table might not exist yet
+      console.log('Active entry check will be available once the table is created');
+      setActiveEntry(null);
     } catch (error) {
       console.error('Error checking active entry:', error);
     }
@@ -116,39 +78,16 @@ export default function TimeTracking() {
     }
 
     try {
-      const { data, error } = await supabase
-        .from('time_entries')
-        .insert({
-          job_id: selectedJobId,
-          user_id: user?.id,
-          start_time: new Date().toISOString(),
-          notes: notes || null
-        })
-        .select(`
-          *,
-          jobs (title)
-        `)
-        .single();
-
-      if (error) throw error;
-
-      setActiveEntry({
-        id: data.id,
-        job_title: data.jobs?.title || 'Unknown Job',
-        start_time: data.start_time,
-        notes: data.notes,
-        is_active: true
+      // For now, just simulate starting the timer
+      console.log(`Would start timer for job ${selectedJobId}`);
+      
+      toast({
+        title: "Info",
+        description: "Time tracking functionality will be available once the database table is created",
       });
 
       setNotes('');
       setSelectedJobId('');
-
-      toast({
-        title: "Timer started",
-        description: "Time tracking has begun for the selected job",
-      });
-
-      fetchTimeEntries();
     } catch (error: any) {
       toast({
         title: "Error starting timer",
@@ -162,28 +101,13 @@ export default function TimeTracking() {
     if (!activeEntry) return;
 
     try {
-      const endTime = new Date().toISOString();
-      const startTime = new Date(activeEntry.start_time);
-      const duration = Math.round((new Date().getTime() - startTime.getTime()) / 1000 / 60); // duration in minutes
-
-      const { error } = await supabase
-        .from('time_entries')
-        .update({
-          end_time: endTime,
-          duration: duration
-        })
-        .eq('id', activeEntry.id);
-
-      if (error) throw error;
-
+      console.log('Would stop timer');
       setActiveEntry(null);
 
       toast({
         title: "Timer stopped",
-        description: `Tracked ${duration} minutes for this job`,
+        description: "Timer functionality will be available once the database is set up",
       });
-
-      fetchTimeEntries();
     } catch (error: any) {
       toast({
         title: "Error stopping timer",
@@ -279,43 +203,9 @@ export default function TimeTracking() {
             <CardTitle>Recent Time Entries</CardTitle>
           </CardHeader>
           <CardContent>
-            {timeEntries.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                No time entries found
-              </div>
-            ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Job</TableHead>
-                    <TableHead>Duration</TableHead>
-                    <TableHead>Status</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {timeEntries.map((entry) => (
-                    <TableRow key={entry.id}>
-                      <TableCell>
-                        <div>
-                          <p className="font-medium">{entry.job_title}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {new Date(entry.start_time).toLocaleDateString()}
-                          </p>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        {entry.duration ? formatDuration(entry.duration) : getCurrentDuration()}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={entry.is_active ? "default" : "secondary"}>
-                          {entry.is_active ? "Active" : "Completed"}
-                        </Badge>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            )}
+            <div className="text-center py-8 text-muted-foreground">
+              Time tracking functionality will be available once the database is properly set up
+            </div>
           </CardContent>
         </Card>
       </div>

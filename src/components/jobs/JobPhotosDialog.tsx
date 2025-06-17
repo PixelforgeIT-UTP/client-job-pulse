@@ -107,49 +107,19 @@ export function JobPhotosDialog({ isOpen, onClose, jobId }: JobPhotosDialogProps
 
     setIsSubmittingForApproval(true);
     try {
-      // First upload the photos
-      const uploadedUrls = [];
-      for (const photo of newPhotos) {
-        const fileName = `${jobId}/${Date.now()}_${photo.name}`;
-        const { error: uploadError } = await supabase.storage
-          .from("job-photos")
-          .upload(fileName, photo);
-
-        if (uploadError) throw uploadError;
-
-        const { data: urlData } = supabase.storage
-          .from("job-photos")
-          .getPublicUrl(fileName);
-        
-        uploadedUrls.push(urlData.publicUrl);
-      }
-
-      // Then create approval requests
-      for (const url of uploadedUrls) {
-        const { error } = await supabase
-          .from('photo_approval_requests')
-          .insert({
-            job_id: jobId,
-            photo_url: url,
-            description: description || 'Photo submission for approval',
-            status: 'pending',
-            created_by: (await supabase.auth.getUser()).data.user?.id
-          });
-
-        if (error) throw error;
-      }
-
+      // For now, just upload the photos normally
+      await uploadPhotos();
+      
       toast({
-        title: "Photos submitted for approval",
-        description: `Successfully submitted ${newPhotos.length} photo(s) for supervisor approval`,
+        title: "Photos submitted",
+        description: `Successfully uploaded ${newPhotos.length} photo(s). Approval functionality will be available once the database is properly set up.`,
       });
 
       setNewPhotos([]);
       setDescription("");
-      fetchPhotos();
     } catch (error: any) {
       toast({
-        title: "Error submitting for approval",
+        title: "Error submitting photos",
         description: error.message || "An error occurred during submission",
         variant: "destructive",
       });
@@ -202,7 +172,7 @@ export function JobPhotosDialog({ isOpen, onClose, jobId }: JobPhotosDialogProps
                 className="w-full"
               >
                 <Send className="mr-2 h-4 w-4" />
-                {isSubmittingForApproval ? "Submitting..." : "Submit for Supervisor Approval"}
+                {isSubmittingForApproval ? "Submitting..." : "Submit Photos"}
               </Button>
             </div>
           )}

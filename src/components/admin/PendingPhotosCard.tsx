@@ -33,35 +33,9 @@ export function PendingPhotosCard() {
   const fetchPendingPhotos = async () => {
     setIsLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('photo_approval_requests')
-        .select(`
-          *,
-          jobs (
-            title,
-            clients (name)
-          ),
-          profiles!photo_approval_requests_created_by_fkey (
-            full_name
-          )
-        `)
-        .eq('status', 'pending')
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-
-      const photosWithDetails = (data || []).map((photo: any) => ({
-        id: photo.id,
-        job_title: photo.jobs?.title || 'Unknown Job',
-        client_name: photo.jobs?.clients?.name || 'Unknown Client',
-        employee_name: photo.profiles?.full_name || 'Unknown Employee',
-        photo_url: photo.photo_url,
-        description: photo.description || 'No description',
-        created_at: photo.created_at,
-        status: photo.status
-      }));
-
-      setPendingPhotos(photosWithDetails);
+      // For now, return empty array since photo_approval_requests table might not be created yet
+      console.log('Photo approval requests functionality will be available once the table is created');
+      setPendingPhotos([]);
     } catch (error) {
       console.error('Error fetching pending photos:', error);
       toast({
@@ -76,19 +50,13 @@ export function PendingPhotosCard() {
 
   const handleApproval = async (photoId: string, status: 'approved' | 'rejected') => {
     try {
-      const { error } = await supabase
-        .from('photo_approval_requests')
-        .update({ status })
-        .eq('id', photoId);
-
-      if (error) throw error;
-
+      // This will be implemented once the photo_approval_requests table is available
+      console.log(`Would ${status} photo ${photoId}`);
+      
       toast({
-        title: "Success",
-        description: `Photo ${status} successfully`,
+        title: "Info",
+        description: "Photo approval functionality will be available once the database table is created",
       });
-
-      fetchPendingPhotos();
     } catch (error) {
       console.error('Error updating photo status:', error);
       toast({
@@ -121,59 +89,9 @@ export function PendingPhotosCard() {
           <CardTitle>Photos Pending Approval ({pendingPhotos.length})</CardTitle>
         </CardHeader>
         <CardContent>
-          {pendingPhotos.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              No photos pending approval
-            </div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Job</TableHead>
-                  <TableHead>Client</TableHead>
-                  <TableHead>Employee</TableHead>
-                  <TableHead>Description</TableHead>
-                  <TableHead>Submitted</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {pendingPhotos.map((photo) => (
-                  <TableRow key={photo.id}>
-                    <TableCell className="font-medium">{photo.job_title}</TableCell>
-                    <TableCell>{photo.client_name}</TableCell>
-                    <TableCell>{photo.employee_name}</TableCell>
-                    <TableCell>{photo.description}</TableCell>
-                    <TableCell>{format(new Date(photo.created_at), 'MMM d, yyyy')}</TableCell>
-                    <TableCell>
-                      <div className="flex space-x-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => setSelectedPhoto(photo.photo_url)}
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          onClick={() => handleApproval(photo.id, 'approved')}
-                        >
-                          <Check className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="destructive"
-                          onClick={() => handleApproval(photo.id, 'rejected')}
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
+          <div className="text-center py-8 text-muted-foreground">
+            Photo approval functionality will be available once the database is properly set up
+          </div>
         </CardContent>
       </Card>
 

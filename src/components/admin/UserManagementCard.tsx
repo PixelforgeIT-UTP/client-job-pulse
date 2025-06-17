@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -13,7 +12,7 @@ type UserProfile = {
   full_name: string | null;
   role: string | null;
   created_at: string;
-  avatar_url: string | null;
+  avatar_url?: string | null;
 };
 
 export function UserManagementCard() {
@@ -31,7 +30,7 @@ export function UserManagementCard() {
     try {
       const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
-        .select('*')
+        .select('id, full_name, role, created_at, avatar_url')
         .order('created_at', { ascending: false });
 
       if (profilesError) throw profilesError;
@@ -77,6 +76,7 @@ export function UserManagementCard() {
     }
   };
 
+  // ... keep existing code (loading state and return JSX)
   if (isLoading) {
     return (
       <Card>
