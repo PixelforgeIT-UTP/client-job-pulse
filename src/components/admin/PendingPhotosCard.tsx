@@ -4,6 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Textarea } from '@/components/ui/textarea';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { supabase } from '@/integrations/supabase/client';
 import { Eye, Check, X } from 'lucide-react';
 import { format } from 'date-fns';
@@ -26,6 +28,8 @@ export function PendingPhotosCard() {
   const [isLoading, setIsLoading] = useState(true);
   const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
   const [updatingPhoto, setUpdatingPhoto] = useState<string | null>(null);
+  const [rejectionDialog, setRejectionDialog] = useState<{ open: boolean; photoId: string }>({ open: false, photoId: '' });
+  const [rejectionReason, setRejectionReason] = useState('');
   const { toast } = useToast();
 
   useEffect(() => {
@@ -78,19 +82,45 @@ export function PendingPhotosCard() {
     }
   };
 
-  const handleApproval = async (photoId: string, status: 'approved' | 'rejected') => {
+  const handleApproval = async (photoId: string, status: 'approved' | 'rejected', reason?: string) => {
     setUpdatingPhoto(photoId);
     try {
+      const updateData: any = {
+        status,
+        reviewed_by: (await supabase.auth.getUser()).data.user?.id,
+        reviewed_at: new Date().toISOString()
+      };
+
+      if (status === 'rejected' && reason) {
+        updateData.rejection_reason = reason;
+      }
+
       const { error } = await supabase
         .from('photo_approval_requests')
-        .update({
-          status,
-          reviewed_by: (await supabase.auth.getUser()).data.user?.id,
-          reviewed_at: new Date().toISOString()
-        })
+        .update(updateData)
         .eq('id', photoId);
 
       if (error) throw error;
+
+      // If rejected, remove the photo from storage
+      if (status === 'rejected') {
+        const photo = pendingPhotos.find(p => p.id === photoId);
+        if (photo) {
+          // Extract file path from URL
+          const urlParts = photo.photo_url.split('/');
+          const fileName = urlParts[urlParts.length - 1];
+          const jobId = photo.job_id;
+          const filePath = `${jobId}/${fileName}`;
+
+          const { error: deleteError } = await supabase.storage
+            .from('job-photos')
+            .remove([filePath]);
+
+          if (deleteError) {
+            console.error('Error deleting photo from storage:', deleteError);
+          }
+        }
+      }
 
       toast({
         title: "Success",
@@ -109,6 +139,17 @@ export function PendingPhotosCard() {
     } finally {
       setUpdatingPhoto(null);
     }
+  };
+
+  const handleReject = (photoId: string) => {
+    setRejectionDialog({ open: true, photoId });
+    setRejectionReason('');
+  };
+
+  const confirmReject = async () => {
+    await handleApproval(rejectionDialog.photoId, 'rejected', rejectionReason);
+    setRejectionDialog({ open: false, photoId: '' });
+    setRejectionReason('');
   };
 
   if (isLoading) {
@@ -187,7 +228,7 @@ export function PendingPhotosCard() {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => handleApproval(photo.id, 'rejected')}
+                          onClick={() => handleReject(photo.id)}
                           disabled={updatingPhoto === photo.id}
                           className="text-red-600 hover:text-red-700"
                         >
@@ -217,6 +258,37 @@ export function PendingPhotosCard() {
           </div>
         </div>
       )}
+
+      <Dialog open={rejectionDialog.open} onOpenChange={(open) => setRejectionDialog({ open, photoId: '' })}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Reject Photo</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Please provide a reason for rejecting this photo. This will help the employee understand what needs to be improved.
+            </p>
+            <Textarea
+              placeholder="Reason for rejection (e.g., photo is blurry, wrong angle, missing details...)"
+              value={rejectionReason}
+              onChange={(e) => setRejectionReason(e.target.value)}
+              rows={4}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRejectionDialog({ open: false, photoId: '' })}>
+              Cancel
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={confirmReject}
+              disabled={!rejectionReason.trim()}
+            >
+              Reject Photo
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

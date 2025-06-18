@@ -5,7 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Navigate } from 'react-router-dom';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Clock, DollarSign, Camera, FileText, Quote, TrendingUp, Users } from 'lucide-react';
-import { HourTrackingCard } from '@/components/admin/HourTrackingCard';
+import { UserHourBreakdownCard } from '@/components/admin/UserHourBreakdownCard';
 import { JobBudgetCard } from '@/components/admin/JobBudgetCard';
 import { PendingPhotosCard } from '@/components/admin/PendingPhotosCard';
 import { JobNotesCard } from '@/components/admin/JobNotesCard';
@@ -136,7 +136,7 @@ export default function AdminDashboard() {
         </TabsContent>
 
         <TabsContent value="hours">
-          <HourTrackingCard />
+          <UserHourBreakdownCard />
         </TabsContent>
 
         <TabsContent value="budget">
