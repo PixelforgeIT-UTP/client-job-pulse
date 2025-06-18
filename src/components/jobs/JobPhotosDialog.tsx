@@ -107,16 +107,53 @@ export function JobPhotosDialog({ isOpen, onClose, jobId }: JobPhotosDialogProps
 
     setIsSubmittingForApproval(true);
     try {
-      // For now, just upload the photos normally
-      await uploadPhotos();
-      
+      const { data: user } = await supabase.auth.getUser();
+      if (!user.user) throw new Error("User not authenticated");
+
+      // Upload photos first
+      const uploadPromises = newPhotos.map(async (photo) => {
+        const fileName = `${jobId}/${Date.now()}_${photo.name}`;
+        const { error, data } = await supabase.storage
+          .from("job-photos")
+          .upload(fileName, photo);
+
+        if (error) throw error;
+
+        // Get the public URL
+        const { data: url } = supabase.storage
+          .from("job-photos")
+          .getPublicUrl(fileName);
+
+        return url.publicUrl;
+      });
+
+      const photoUrls = await Promise.all(uploadPromises);
+
+      // Create approval requests for each photo
+      const approvalPromises = photoUrls.map(async (photoUrl) => {
+        const { error } = await supabase
+          .from('photo_approval_requests')
+          .insert({
+            job_id: jobId,
+            employee_id: user.user!.id,
+            photo_url: photoUrl,
+            description: description || null,
+            status: 'pending'
+          });
+
+        if (error) throw error;
+      });
+
+      await Promise.all(approvalPromises);
+
       toast({
-        title: "Photos submitted",
-        description: `Successfully uploaded ${newPhotos.length} photo(s). Approval functionality will be available once the database is properly set up.`,
+        title: "Photos submitted for approval",
+        description: `Successfully submitted ${newPhotos.length} photo(s) for supervisor approval`,
       });
 
       setNewPhotos([]);
       setDescription("");
+      fetchPhotos();
     } catch (error: any) {
       toast({
         title: "Error submitting photos",
@@ -172,7 +209,7 @@ export function JobPhotosDialog({ isOpen, onClose, jobId }: JobPhotosDialogProps
                 className="w-full"
               >
                 <Send className="mr-2 h-4 w-4" />
-                {isSubmittingForApproval ? "Submitting..." : "Submit Photos"}
+                {isSubmittingForApproval ? "Submitting..." : "Submit for Approval"}
               </Button>
             </div>
           )}
