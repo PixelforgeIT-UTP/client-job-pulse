@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
@@ -50,7 +51,7 @@ export function UserHourBreakdownCard() {
             completed_at,
             clients (name)
           ),
-          profiles (
+          profiles!job_assignments_user_id_fkey (
             full_name
           )
         `);
