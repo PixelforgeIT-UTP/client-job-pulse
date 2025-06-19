@@ -1,7 +1,6 @@
-
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
-import { CalendarIcon, Clock, DollarSign, MapPin, Plus } from "lucide-react";
+import { CalendarIcon, Clock, DollarSign, MapPin, Plus, Users } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
 import { Button } from "@/components/ui/button";
@@ -14,6 +13,7 @@ import { cn } from "@/lib/utils";
 import { supabase } from "@/lib/supabaseClient";
 import { useToast } from "@/hooks/use-toast";
 import { ClientSelector } from "./ClientSelector";
+import { UserSelector } from "./UserSelector";
 
 interface JobFormDialogProps {
   isOpen: boolean;
@@ -38,6 +38,7 @@ export function JobFormDialog({ isOpen, onClose, onSuccess, initialData }: JobFo
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
+  const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
 
   const [items, setItems] = useState([
     { description: "", quantity: 1, unit_price: 0, billingType: "flat", rateLabel: "" },
@@ -63,6 +64,25 @@ export function JobFormDialog({ isOpen, onClose, onSuccess, initialData }: JobFo
     };
     fetchUser();
   }, []);
+
+  useEffect(() => {
+    const fetchJobAssignments = async () => {
+      if (initialData?.id) {
+        try {
+          const { data, error } = await supabase
+            .from('job_assignments')
+            .select('user_id')
+            .eq('job_id', initialData.id);
+
+          if (error) throw error;
+          setSelectedUserIds(data?.map(assignment => assignment.user_id) || []);
+        } catch (error) {
+          console.error('Error fetching job assignments:', error);
+        }
+      }
+    };
+    fetchJobAssignments();
+  }, [initialData]);
 
   const handleAddItem = () => {
     setItems([...items, { description: "", quantity: 1, unit_price: 0, billingType: "flat", rateLabel: "" }]);
@@ -103,6 +123,15 @@ export function JobFormDialog({ isOpen, onClose, onSuccess, initialData }: JobFo
     items.reduce((sum, item) => sum + item.quantity * item.unit_price, 0).toFixed(2);
 
   async function onSubmit(data: any) {
+    if (selectedUserIds.length === 0) {
+      toast({
+        title: "Validation Error",
+        description: "At least one user must be assigned to the job.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       const scheduledDateTime = date ? new Date(date) : new Date();
@@ -130,11 +159,39 @@ export function JobFormDialog({ isOpen, onClose, onSuccess, initialData }: JobFo
       if (jobId) {
         const { error } = await supabase.from("jobs").update(jobData).eq("id", jobId);
         if (error) throw error;
+
+        // Update job assignments
+        await supabase.from('job_assignments').delete().eq('job_id', jobId);
+        
+        const assignments = selectedUserIds.map(userId => ({
+          job_id: jobId,
+          user_id: userId,
+          created_by: userId
+        }));
+        
+        const { error: assignmentError } = await supabase
+          .from('job_assignments')
+          .insert(assignments);
+        
+        if (assignmentError) throw assignmentError;
       } else {
         const { data: jobResult, error } = await supabase.from("jobs").insert(jobData).select("id").maybeSingle();
         if (error) throw error;
         if (!jobResult) throw new Error("Job creation failed.");
         jobId = jobResult.id;
+
+        // Create job assignments
+        const assignments = selectedUserIds.map(userId => ({
+          job_id: jobId,
+          user_id: userId,
+          created_by: userId
+        }));
+        
+        const { error: assignmentError } = await supabase
+          .from('job_assignments')
+          .insert(assignments);
+        
+        if (assignmentError) throw assignmentError;
 
         // Add initial note if provided
         if (data.notes && data.notes.trim()) {
@@ -213,6 +270,19 @@ export function JobFormDialog({ isOpen, onClose, onSuccess, initialData }: JobFo
                 </FormItem>
               )}
             />
+
+            <FormItem>
+              <FormLabel>
+                <Users className="inline mr-2 h-4 w-4" />
+                Assign Users*
+              </FormLabel>
+              <FormControl>
+                <UserSelector 
+                  selectedUserIds={selectedUserIds}
+                  onSelectionChange={setSelectedUserIds}
+                />
+              </FormControl>
+            </FormItem>
 
             <FormField
               control={form.control}

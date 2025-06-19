@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -37,32 +36,43 @@ export function UserHourBreakdownCard() {
   const fetchUserHourData = async () => {
     setIsLoading(true);
     try {
-      // Fetch all jobs with assigned users
-      const { data: jobs, error } = await supabase
-        .from('jobs')
+      // Fetch job assignments with job and client details
+      const { data: assignments, error } = await supabase
+        .from('job_assignments')
         .select(`
-          id,
-          title,
-          duration,
-          status,
-          assigned_to,
-          scheduled_at,
-          completed_at,
-          clients (name)
-        `)
-        .not('assigned_to', 'is', null);
+          user_id,
+          jobs (
+            id,
+            title,
+            duration,
+            status,
+            scheduled_at,
+            completed_at,
+            clients (name)
+          ),
+          profiles (
+            full_name
+          )
+        `);
 
       if (error) throw error;
 
-      // Group jobs by user
-      const userJobMap = new Map<string, JobAllocation[]>();
+      // Group assignments by user
+      const userJobMap = new Map<string, { userInfo: any; jobs: JobAllocation[] }>();
       
-      for (const job of jobs || []) {
-        if (!userJobMap.has(job.assigned_to)) {
-          userJobMap.set(job.assigned_to, []);
+      for (const assignment of assignments || []) {
+        const userId = assignment.user_id;
+        const job = assignment.jobs;
+        const userProfile = assignment.profiles;
+        
+        if (!userJobMap.has(userId)) {
+          userJobMap.set(userId, {
+            userInfo: userProfile,
+            jobs: []
+          });
         }
         
-        userJobMap.get(job.assigned_to)!.push({
+        userJobMap.get(userId)!.jobs.push({
           job_id: job.id,
           job_title: job.title,
           client_name: job.clients?.name || 'Unknown Client',
@@ -73,28 +83,21 @@ export function UserHourBreakdownCard() {
         });
       }
 
-      // Fetch user profiles and calculate totals
+      // Convert to array format
       const userHourData: UserHourData[] = [];
       
-      for (const [userId, jobAllocations] of userJobMap.entries()) {
-        try {
-          const { data: profile } = await supabase
-            .rpc('get_user_profile', { user_id: userId });
-          
-          const userName = profile?.[0]?.full_name || 'Unknown Employee';
-          const totalHours = jobAllocations.reduce((sum, job) => sum + job.hours, 0);
-          
-          userHourData.push({
-            user_id: userId,
-            user_name: userName,
-            total_hours: totalHours,
-            job_allocations: jobAllocations.sort((a, b) => 
-              new Date(b.scheduled_at || '').getTime() - new Date(a.scheduled_at || '').getTime()
-            )
-          });
-        } catch (error) {
-          console.error('Error fetching user profile:', error);
-        }
+      for (const [userId, data] of userJobMap.entries()) {
+        const totalHours = data.jobs.reduce((sum, job) => sum + job.hours, 0);
+        const userName = data.userInfo?.full_name || 'Unknown Employee';
+        
+        userHourData.push({
+          user_id: userId,
+          user_name: userName,
+          total_hours: totalHours,
+          job_allocations: data.jobs.sort((a, b) => 
+            new Date(b.scheduled_at || '').getTime() - new Date(a.scheduled_at || '').getTime()
+          )
+        });
       }
 
       // Sort by total hours descending

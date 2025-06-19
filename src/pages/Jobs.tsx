@@ -24,9 +24,11 @@ import { JobFormDialog } from '@/components/jobs/JobFormDialog';
 import { format } from 'date-fns';
 import { JobPhotosDialog } from '@/components/jobs/JobPhotosDialog';
 import { JobNotesDialog } from '@/components/jobs/JobNotesDialog';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function Jobs() {
   const { toast } = useToast();
+  const { isAdmin } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [jobs, setJobs] = useState<any[]>([]);
   const [clients, setClients] = useState<{ [key: string]: string }>({});
@@ -139,10 +141,12 @@ export default function Jobs() {
           <h1 className="text-2xl font-bold tracking-tight">Jobs</h1>
           <p className="text-muted-foreground">Manage your service jobs</p>
         </div>
-        <Button onClick={handleAddJob}>
-          <Plus className="mr-2 h-4 w-4" />
-          Add Job
-        </Button>
+        {isAdmin && (
+          <Button onClick={handleAddJob}>
+            <Plus className="mr-2 h-4 w-4" />
+            Add Job
+          </Button>
+        )}
       </div>
 
       <Card>
@@ -216,9 +220,11 @@ export default function Jobs() {
                             <Button variant="secondary" size="sm" onClick={() => handleViewNotes(job)}>
                               Notes
                             </Button>
-                            <Button variant="default" size="sm" onClick={() => handleEditJob(job)}>
-                              Edit
-                            </Button>
+                            {isAdmin && (
+                              <Button variant="default" size="sm" onClick={() => handleEditJob(job)}>
+                                Edit
+                              </Button>
+                            )}
                           </div>
                         </TableCell>
                       </TableRow>
@@ -237,12 +243,14 @@ export default function Jobs() {
         </CardContent>
       </Card>
 
-      <JobFormDialog
-        isOpen={isJobFormOpen}
-        onClose={() => setIsJobFormOpen(false)}
-        initialData={selectedJob}
-        onSuccess={fetchJobs}
-      />
+      {isAdmin && (
+        <JobFormDialog
+          isOpen={isJobFormOpen}
+          onClose={() => setIsJobFormOpen(false)}
+          initialData={selectedJob}
+          onSuccess={fetchJobs}
+        />
+      )}
 
       {selectedJob && (
         <>
