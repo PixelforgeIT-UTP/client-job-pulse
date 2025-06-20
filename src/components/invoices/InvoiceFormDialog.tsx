@@ -1,5 +1,7 @@
+
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
+import { useAuth } from '@/contexts/AuthContext';
 import {
   Dialog,
   DialogContent,
@@ -9,8 +11,9 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { Plus } from 'lucide-react';
+import { Plus, Trash } from 'lucide-react';
 
 export function InvoiceFormDialog({
   isOpen,
@@ -22,15 +25,20 @@ export function InvoiceFormDialog({
   onSuccess: () => void;
 }) {
   const { toast } = useToast();
-  const [jobs, setJobs] = useState<any[]>([]);
-  const [selectedJobId, setSelectedJobId] = useState('');
-  const [dueDate, setDueDate] = useState('');
+  const { user } = useAuth();
+  const [userRole, setUserRole] = useState<string>('');
+  
+  // Customer information
+  const [customerName, setCustomerName] = useState('');
+  const [customerAddress, setCustomerAddress] = useState('');
+  const [customerPhone, setCustomerPhone] = useState('');
+  const [customerEmail, setCustomerEmail] = useState('');
+  const [jobDate, setJobDate] = useState('');
+  
   const [items, setItems] = useState([
     { description: '', quantity: 1, unit_price: 0, billingType: 'flat', rateLabel: '' },
   ]);
   const [submitting, setSubmitting] = useState(false);
-  const [newJobTitle, setNewJobTitle] = useState('');
-  const [createNewJob, setCreateNewJob] = useState(false);
 
   const predefinedServices = [
     { label: 'Raking', billingType: 'flat', rate: 100 },
@@ -42,15 +50,41 @@ export function InvoiceFormDialog({
   ];
 
   useEffect(() => {
-    if (isOpen) {
-      supabase.from('jobs').select('id, title').then(({ data }) => {
-        if (data) setJobs(data);
+    if (isOpen && user) {
+      // Get user role
+      supabase.from('profiles').select('role').eq('id', user.id).single().then(({ data }) => {
+        if (data) setUserRole(data.role);
       });
     }
-  }, [isOpen]);
+  }, [isOpen, user]);
+
+  // Only allow techs to create invoices
+  if (userRole && userRole !== 'tech') {
+    return (
+      <Dialog open={isOpen} onOpenChange={onClose}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Access Denied</DialogTitle>
+            <DialogDescription>
+              Only technicians can create invoices.
+            </DialogDescription>
+          </DialogHeader>
+          <Button onClick={onClose}>Close</Button>
+        </DialogContent>
+      </Dialog>
+    );
+  }
 
   const handleAddItem = () => {
     setItems([...items, { description: '', quantity: 1, unit_price: 0, billingType: 'flat', rateLabel: '' }]);
+  };
+
+  const handleRemoveItem = (index: number) => {
+    if (items.length > 1) {
+      const updated = [...items];
+      updated.splice(index, 1);
+      setItems(updated);
+    }
   };
 
   const handleItemChange = (index: number, field: string, value: any) => {
@@ -90,35 +124,29 @@ export function InvoiceFormDialog({
     items.reduce((sum, item) => sum + item.quantity * item.unit_price, 0).toFixed(2);
 
   const handleSubmit = async () => {
-    if (!dueDate || items.length === 0) {
+    if (!customerName || !customerAddress || !jobDate || items.length === 0) {
       toast({
         title: 'Validation error',
-        description: 'Missing required fields.',
+        description: 'Customer name, address, job date, and at least one service item are required.',
         variant: 'destructive',
       });
       return;
     }
 
     setSubmitting(true);
-    let jobId = selectedJobId;
 
-    if (createNewJob && newJobTitle.trim()) {
-      const { data: newJob, error } = await supabase
-        .from('jobs')
-        .insert({ title: newJobTitle })
-        .select()
-        .single();
-      if (error) {
-        toast({ title: 'Error creating job', description: error.message, variant: 'destructive' });
-        setSubmitting(false);
-        return;
-      }
-      jobId = newJob.id;
-    }
-
+    // Create invoice with workflow status
     const { data: invoiceData, error: invoiceError } = await supabase
       .from('invoices')
-      .insert([{ job_id: jobId, due_date: dueDate, amount: Number(calculateTotal()), paid: false }])
+      .insert([{ 
+        customer_name: customerName,
+        customer_address: customerAddress,
+        customer_phone: customerPhone,
+        customer_email: customerEmail,
+        job_date: jobDate,
+        amount: Number(calculateTotal()),
+        status: 'pending_supervisor_approval'
+      }])
       .select()
       .single();
 
@@ -142,72 +170,99 @@ export function InvoiceFormDialog({
       return;
     }
 
-    toast({ title: 'Invoice created' });
+    toast({ title: 'Invoice created and sent for supervisor approval' });
     setSubmitting(false);
     onClose();
     onSuccess();
+    
+    // Reset form
+    setCustomerName('');
+    setCustomerAddress('');
+    setCustomerPhone('');
+    setCustomerEmail('');
+    setJobDate('');
+    setItems([{ description: '', quantity: 1, unit_price: 0, billingType: 'flat', rateLabel: '' }]);
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-3xl space-y-6">
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto space-y-6">
         <DialogHeader>
           <DialogTitle className="text-xl">Create Invoice</DialogTitle>
           <DialogDescription>
-            Fill out the invoice information and add your line items.
+            Fill out the customer information and itemized services. This will be sent to supervisor for approval.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="text-sm font-medium block mb-1">Due Date</label>
-            <Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
+        {/* Customer Information Section */}
+        <div className="border rounded-md p-4 bg-muted space-y-4">
+          <h3 className="text-sm font-medium text-muted-foreground">Customer Information</h3>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="text-sm font-medium block mb-1">Customer Name *</label>
+              <Input 
+                value={customerName} 
+                onChange={(e) => setCustomerName(e.target.value)}
+                placeholder="Enter customer name"
+              />
+            </div>
+            
+            <div>
+              <label className="text-sm font-medium block mb-1">Job Date *</label>
+              <Input 
+                type="date" 
+                value={jobDate} 
+                onChange={(e) => setJobDate(e.target.value)} 
+              />
+            </div>
           </div>
 
           <div>
-            <label className="text-sm font-medium block mb-1">Job</label>
-            {!createNewJob ? (
-              <select
-                className="w-full p-2 border rounded text-sm"
-                value={selectedJobId}
-                onChange={(e) => setSelectedJobId(e.target.value)}
-              >
-                <option value="">Select a job</option>
-                {jobs.map((job) => (
-                  <option key={job.id} value={job.id}>
-                    {job.title}
-                  </option>
-                ))}
-              </select>
-            ) : (
-              <Input
-                placeholder="New Job Title"
-                value={newJobTitle}
-                onChange={(e) => setNewJobTitle(e.target.value)}
+            <label className="text-sm font-medium block mb-1">Customer Address *</label>
+            <Textarea 
+              value={customerAddress} 
+              onChange={(e) => setCustomerAddress(e.target.value)}
+              placeholder="Enter full customer address"
+              rows={2}
+            />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="text-sm font-medium block mb-1">Phone</label>
+              <Input 
+                value={customerPhone} 
+                onChange={(e) => setCustomerPhone(e.target.value)}
+                placeholder="Customer phone number"
               />
-            )}
-            <Button
-              variant="link"
-              className="text-xs mt-1 px-0 text-muted-foreground"
-              onClick={() => setCreateNewJob(!createNewJob)}
-            >
-              {createNewJob ? 'Select existing job' : 'Create new job'}
-            </Button>
+            </div>
+            
+            <div>
+              <label className="text-sm font-medium block mb-1">Email</label>
+              <Input 
+                type="email"
+                value={customerEmail} 
+                onChange={(e) => setCustomerEmail(e.target.value)}
+                placeholder="Customer email address"
+              />
+            </div>
           </div>
         </div>
 
+        {/* Services Section */}
         <div className="border rounded-md p-4 bg-muted space-y-4">
-          <h3 className="text-sm font-medium text-muted-foreground">Line Items</h3>
+          <h3 className="text-sm font-medium text-muted-foreground">Services</h3>
 
           {items.map((item, idx) => {
             const isCustom = item.description === 'Custom Service';
 
             return (
-              <div key={idx} className="grid grid-cols-1 md:grid-cols-6 gap-3 items-end">
-                <div className="md:col-span-2">
+              <div key={idx} className="grid grid-cols-1 md:grid-cols-7 gap-3 items-end">
+                <div className="md:col-span-3">
                   <label className="text-xs mb-1 block">Service</label>
                   <select
-                    className="w-full border p-2 text-sm"
+                    className="w-full border p-2 text-sm rounded"
                     value={isCustom ? 'Custom Service' : item.description}
                     onChange={(e) => handleServiceSelect(idx, e.target.value)}
                   >
@@ -249,9 +304,29 @@ export function InvoiceFormDialog({
                   <label className="text-xs mb-1 block">Unit Price</label>
                   <Input
                     type="number"
+                    step="0.01"
                     value={item.unit_price}
                     onChange={(e) => handleItemChange(idx, 'unit_price', e.target.value)}
                   />
+                </div>
+
+                <div className="md:col-span-1">
+                  <label className="text-xs mb-1 block">Total</label>
+                  <div className="p-2 bg-gray-100 rounded text-sm">
+                    ${(item.quantity * item.unit_price).toFixed(2)}
+                  </div>
+                </div>
+
+                <div>
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => handleRemoveItem(idx)}
+                    disabled={items.length === 1}
+                  >
+                    <Trash className="h-4 w-4" />
+                  </Button>
                 </div>
               </div>
             );
@@ -264,18 +339,19 @@ export function InvoiceFormDialog({
             className="text-sm"
           >
             <Plus className="mr-2 h-4 w-4" />
-            Add Line Item
+            Add Service Item
           </Button>
         </div>
 
-        <div className="flex justify-between items-center pt-4 font-medium text-sm">
-          <span className="text-muted-foreground">Total</span>
+        <div className="flex justify-between items-center pt-4 font-medium text-lg border-t">
+          <span>Total Amount</span>
           <span>${calculateTotal()}</span>
         </div>
 
-        <div className="flex justify-end">
+        <div className="flex justify-end gap-2">
+          <Button variant="outline" onClick={onClose}>Cancel</Button>
           <Button onClick={handleSubmit} disabled={submitting}>
-            {submitting ? 'Saving...' : 'Create Invoice'}
+            {submitting ? 'Creating...' : 'Create Invoice'}
           </Button>
         </div>
       </DialogContent>

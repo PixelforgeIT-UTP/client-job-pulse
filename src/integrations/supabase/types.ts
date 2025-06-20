@@ -112,10 +112,20 @@ export type Database = {
           amount: number | null
           created_at: string | null
           created_by: string | null
+          customer_address: string | null
+          customer_email: string | null
+          customer_name: string | null
+          customer_phone: string | null
           due_date: string | null
           id: string
+          job_date: string | null
           job_id: string | null
           paid: boolean | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          signature_data: string | null
+          status: string | null
+          supervisor_notes: string | null
           updated_at: string | null
           updated_by: string | null
         }
@@ -123,10 +133,20 @@ export type Database = {
           amount?: number | null
           created_at?: string | null
           created_by?: string | null
+          customer_address?: string | null
+          customer_email?: string | null
+          customer_name?: string | null
+          customer_phone?: string | null
           due_date?: string | null
           id?: string
+          job_date?: string | null
           job_id?: string | null
           paid?: boolean | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          signature_data?: string | null
+          status?: string | null
+          supervisor_notes?: string | null
           updated_at?: string | null
           updated_by?: string | null
         }
@@ -134,10 +154,20 @@ export type Database = {
           amount?: number | null
           created_at?: string | null
           created_by?: string | null
+          customer_address?: string | null
+          customer_email?: string | null
+          customer_name?: string | null
+          customer_phone?: string | null
           due_date?: string | null
           id?: string
+          job_date?: string | null
           job_id?: string | null
           paid?: boolean | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          signature_data?: string | null
+          status?: string | null
+          supervisor_notes?: string | null
           updated_at?: string | null
           updated_by?: string | null
         }
@@ -147,6 +177,13 @@ export type Database = {
             columns: ["job_id"]
             isOneToOne: false
             referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]

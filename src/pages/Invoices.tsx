@@ -1,5 +1,7 @@
+
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -18,16 +20,31 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Search, Trash, CheckCircle, Pencil } from 'lucide-react';
+import { Plus, Search, Trash, CheckCircle, Pencil, FileSignature, Eye } from 'lucide-react';
 import { InvoiceFormDialog } from '@/components/invoices/InvoiceFormDialog';
-import { EditInvoiceDialog } from '@/components/invoices/EditInvoiceDialog';
+import { SupervisorApprovalDialog } from '@/components/invoices/SupervisorApprovalDialog';
+import { SignatureDialog } from '@/components/invoices/SignatureDialog';
 
 export default function Invoices() {
+  const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [invoices, setInvoices] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editInvoice, setEditInvoice] = useState<any | null>(null);
+  const [userRole, setUserRole] = useState<string>('');
+  
+  // Dialog states
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [supervisorApprovalInvoice, setSupervisorApprovalInvoice] = useState<any | null>(null);
+  const [signatureInvoice, setSignatureInvoice] = useState<any | null>(null);
+
+  useEffect(() => {
+    if (user) {
+      // Get user role
+      supabase.from('profiles').select('role').eq('id', user.id).single().then(({ data }) => {
+        if (data) setUserRole(data.role);
+      });
+    }
+  }, [user]);
 
   const fetchInvoices = async () => {
     setLoading(true);
@@ -35,19 +52,25 @@ export default function Invoices() {
       .from('invoices')
       .select(`
         id,
+        customer_name,
+        customer_address,
+        customer_phone,
+        customer_email,
+        job_date,
         amount,
-        paid,
+        status,
+        signature_data,
+        supervisor_notes,
+        reviewed_at,
         due_date,
-        job:jobs (
-          title
-        ),
+        created_at,
         items:invoice_items (
           description,
           quantity,
           unit_price
         )
       `)
-      .order('due_date', { ascending: true });
+      .order('created_at', { ascending: false });
 
     console.log("📦 Supabase Invoices Response:", data);
     if (error) {
@@ -66,40 +89,23 @@ export default function Invoices() {
   }, []);
 
   const filteredInvoices = invoices.filter((invoice) => {
-    const title = invoice.job?.title || '';
-    return title.toLowerCase().includes(searchTerm.toLowerCase());
+    const customerName = invoice.customer_name || '';
+    return customerName.toLowerCase().includes(searchTerm.toLowerCase());
   });
-
-  const getStatusFromInvoice = (invoice: any) => {
-    if (invoice.paid) return 'paid';
-    const dueDate = new Date(invoice.due_date);
-    const today = new Date();
-    return dueDate < today ? 'overdue' : 'pending';
-  };
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case 'paid':
-        return <Badge className="bg-green-500 hover:bg-green-600">Paid</Badge>;
-      case 'pending':
-        return (
-          <Badge variant="outline" className="text-amber-500 border-amber-500">
-            Pending
-          </Badge>
-        );
-      case 'overdue':
-        return <Badge className="bg-red-500 hover:bg-red-600">Overdue</Badge>;
+      case 'pending_supervisor_approval':
+        return <Badge className="bg-orange-500 hover:bg-orange-600">Pending Supervisor</Badge>;
+      case 'pending_client_signature':
+        return <Badge className="bg-blue-500 hover:bg-blue-600">Awaiting Signature</Badge>;
+      case 'approved':
+        return <Badge className="bg-green-500 hover:bg-green-600">Approved</Badge>;
+      case 'rejected':
+        return <Badge className="bg-red-500 hover:bg-red-600">Rejected</Badge>;
       default:
-        return null;
+        return <Badge variant="outline">{status}</Badge>;
     }
-  };
-
-  const markAsPaid = async (invoiceId: string) => {
-    const { error } = await supabase
-      .from('invoices')
-      .update({ paid: true })
-      .eq('id', invoiceId);
-    if (!error) fetchInvoices();
   };
 
   const deleteInvoice = async (invoiceId: string) => {
@@ -108,31 +114,41 @@ export default function Invoices() {
     if (!error) fetchInvoices();
   };
 
+  const canCreateInvoice = userRole === 'tech';
+  const canApproveInvoices = userRole === 'admin' || userRole === 'supervisor';
+  const canDeleteInvoices = userRole === 'admin';
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Invoices</h1>
-          <p className="text-muted-foreground">Manage your client invoices</p>
+          <p className="text-muted-foreground">
+            {canCreateInvoice && "Create invoices for customer approval"}
+            {canApproveInvoices && "Review and approve technician invoices"}
+            {!canCreateInvoice && !canApproveInvoices && "View invoice status"}
+          </p>
         </div>
-        <Button onClick={() => setIsDialogOpen(true)}>
-          <Plus className="mr-2 h-4 w-4" />
-          New Invoice
-        </Button>
+        {canCreateInvoice && (
+          <Button onClick={() => setIsCreateDialogOpen(true)}>
+            <Plus className="mr-2 h-4 w-4" />
+            New Invoice
+          </Button>
+        )}
       </div>
 
       <Card>
         <CardHeader className="pb-3">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
-              <CardTitle>Invoice Management</CardTitle>
-              <CardDescription>View and manage your invoices</CardDescription>
+              <CardTitle>Invoice Workflow</CardTitle>
+              <CardDescription>Track invoices through the approval process</CardDescription>
             </div>
             <div className="relative max-w-sm">
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
                 type="search"
-                placeholder="Search by job title..."
+                placeholder="Search by customer name..."
                 className="w-full pl-8"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
@@ -145,52 +161,81 @@ export default function Invoices() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Job</TableHead>
-                  <TableHead>Due Date</TableHead>
-                  <TableHead>Status</TableHead>
+                  <TableHead>Customer</TableHead>
+                  <TableHead>Job Date</TableHead>
                   <TableHead>Amount</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Created</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="h-24 text-center">
+                    <TableCell colSpan={6} className="h-24 text-center">
                       Loading...
                     </TableCell>
                   </TableRow>
                 ) : filteredInvoices.length > 0 ? (
                   filteredInvoices.map((invoice) => (
-                    <>
-                      <TableRow key={invoice.id}>
-                        <TableCell className="font-medium">
-                          {invoice.job?.title || '—'}
-                        </TableCell>
-                        <TableCell>
-                          {new Date(invoice.due_date).toLocaleDateString()}
-                        </TableCell>
-                        <TableCell>{getStatusBadge(getStatusFromInvoice(invoice))}</TableCell>
-                        <TableCell>${Number(invoice.amount).toFixed(2)}</TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex justify-end gap-2">
-                            {!invoice.paid && (
-                              <Button
-                                size="icon"
-                                variant="ghost"
-                                onClick={() => markAsPaid(invoice.id)}
-                                title="Mark as Paid"
-                              >
-                                <CheckCircle className="w-4 h-4 text-green-600" />
-                              </Button>
-                            )}
+                    <TableRow key={invoice.id}>
+                      <TableCell className="font-medium">
+                        <div>
+                          <div>{invoice.customer_name}</div>
+                          <div className="text-xs text-muted-foreground">
+                            {invoice.customer_address}
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {new Date(invoice.job_date).toLocaleDateString()}
+                      </TableCell>
+                      <TableCell>${Number(invoice.amount).toFixed(2)}</TableCell>
+                      <TableCell>{getStatusBadge(invoice.status)}</TableCell>
+                      <TableCell>
+                        {new Date(invoice.created_at).toLocaleDateString()}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-2">
+                          {/* Supervisor Approval Action */}
+                          {canApproveInvoices && invoice.status === 'pending_supervisor_approval' && (
                             <Button
                               size="icon"
                               variant="ghost"
-                              onClick={() => setEditInvoice(invoice)}
-                              title="Edit"
+                              onClick={() => setSupervisorApprovalInvoice(invoice)}
+                              title="Review & Approve"
                             >
-                              <Pencil className="w-4 h-4" />
+                              <CheckCircle className="w-4 h-4 text-orange-600" />
                             </Button>
+                          )}
+                          
+                          {/* Signature Collection Action */}
+                          {canCreateInvoice && invoice.status === 'pending_client_signature' && (
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              onClick={() => setSignatureInvoice(invoice)}
+                              title="Collect Signature"
+                            >
+                              <FileSignature className="w-4 h-4 text-blue-600" />
+                            </Button>
+                          )}
+                          
+                          {/* View Details Action */}
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            onClick={() => {
+                              // You could implement a view-only dialog here
+                              console.log('View invoice details:', invoice);
+                            }}
+                            title="View Details"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </Button>
+                          
+                          {/* Delete Action (Admin only) */}
+                          {canDeleteInvoices && (
                             <Button
                               size="icon"
                               variant="ghost"
@@ -199,46 +244,14 @@ export default function Invoices() {
                             >
                               <Trash className="w-4 h-4 text-red-600" />
                             </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-
-                      {invoice.items?.length > 0 && (
-                        <TableRow>
-                          <TableCell colSpan={5}>
-                            <div className="border rounded p-2 bg-muted space-y-2">
-                              <p className="font-semibold">Line Items</p>
-                              <Table>
-                                <TableHeader>
-                                  <TableRow>
-                                    <TableHead>Description</TableHead>
-                                    <TableHead>Qty</TableHead>
-                                    <TableHead>Unit Price</TableHead>
-                                    <TableHead>Total</TableHead>
-                                  </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                  {invoice.items.map((item, idx) => (
-                                    <TableRow key={idx}>
-                                      <TableCell>{item.description}</TableCell>
-                                      <TableCell>{item.quantity}</TableCell>
-                                      <TableCell>${item.unit_price.toFixed(2)}</TableCell>
-                                      <TableCell>
-                                        ${(item.quantity * item.unit_price).toFixed(2)}
-                                      </TableCell>
-                                    </TableRow>
-                                  ))}
-                                </TableBody>
-                              </Table>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      )}
-                    </>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={5} className="h-24 text-center">
+                    <TableCell colSpan={6} className="h-24 text-center">
                       No invoices found
                     </TableCell>
                   </TableRow>
@@ -249,17 +262,51 @@ export default function Invoices() {
         </CardContent>
       </Card>
 
-      {/* Modals */}
+      {/* Workflow Status Legend */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-sm">Workflow Status Guide</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
+            <div className="flex items-center gap-2">
+              <Badge className="bg-orange-500">Pending Supervisor</Badge>
+              <span>Tech created, awaiting supervisor review</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Badge className="bg-blue-500">Awaiting Signature</Badge>
+              <span>Approved, needs client signature</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Badge className="bg-green-500">Approved</Badge>
+              <span>Signed, job created automatically</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Badge className="bg-red-500">Rejected</Badge>
+              <span>Returned to tech for revision</span>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Dialogs */}
       <InvoiceFormDialog
-        isOpen={isDialogOpen}
-        onClose={() => setIsDialogOpen(false)}
+        isOpen={isCreateDialogOpen}
+        onClose={() => setIsCreateDialogOpen(false)}
         onSuccess={fetchInvoices}
       />
 
-      <EditInvoiceDialog
-        isOpen={!!editInvoice}
-        invoice={editInvoice}
-        onClose={() => setEditInvoice(null)}
+      <SupervisorApprovalDialog
+        isOpen={!!supervisorApprovalInvoice}
+        invoice={supervisorApprovalInvoice}
+        onClose={() => setSupervisorApprovalInvoice(null)}
+        onSuccess={fetchInvoices}
+      />
+
+      <SignatureDialog
+        isOpen={!!signatureInvoice}
+        invoice={signatureInvoice}
+        onClose={() => setSignatureInvoice(null)}
         onSuccess={fetchInvoices}
       />
     </div>
