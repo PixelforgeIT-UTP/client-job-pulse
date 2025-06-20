@@ -190,7 +190,7 @@ export default function Quotes() {
                     </TableCell>
                   </TableRow>
                 )}
-              </TableRow>
+              </TableBody>
             </Table>
           </div>
         </CardContent>
