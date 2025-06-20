@@ -20,7 +20,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Search, Trash, CheckCircle, Pencil, FileSignature, Eye } from 'lucide-react';
+import { Plus, Search, Trash, CheckCircle, FileSignature, Eye } from 'lucide-react';
 import { InvoiceFormDialog } from '@/components/invoices/InvoiceFormDialog';
 import { SupervisorApprovalDialog } from '@/components/invoices/SupervisorApprovalDialog';
 import { SignatureDialog } from '@/components/invoices/SignatureDialog';
@@ -114,7 +114,7 @@ export default function Invoices() {
     if (!error) fetchInvoices();
   };
 
-  const canCreateInvoice = userRole === 'tech';
+  const canCreateInvoice = userRole === 'tech' || userRole === 'admin';
   const canApproveInvoices = userRole === 'admin' || userRole === 'supervisor';
   const canDeleteInvoices = userRole === 'admin';
 
@@ -258,33 +258,6 @@ export default function Invoices() {
                 )}
               </TableBody>
             </Table>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Workflow Status Legend */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-sm">Workflow Status Guide</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
-            <div className="flex items-center gap-2">
-              <Badge className="bg-orange-500">Pending Supervisor</Badge>
-              <span>Tech created, awaiting supervisor review</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Badge className="bg-blue-500">Awaiting Signature</Badge>
-              <span>Approved, needs client signature</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Badge className="bg-green-500">Approved</Badge>
-              <span>Signed, job created automatically</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Badge className="bg-red-500">Rejected</Badge>
-              <span>Returned to tech for revision</span>
-            </div>
           </div>
         </CardContent>
       </Card>

@@ -58,23 +58,6 @@ export function InvoiceFormDialog({
     }
   }, [isOpen, user]);
 
-  // Only allow techs to create invoices
-  if (userRole && userRole !== 'tech') {
-    return (
-      <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Access Denied</DialogTitle>
-            <DialogDescription>
-              Only technicians can create invoices.
-            </DialogDescription>
-          </DialogHeader>
-          <Button onClick={onClose}>Close</Button>
-        </DialogContent>
-      </Dialog>
-    );
-  }
-
   const handleAddItem = () => {
     setItems([...items, { description: '', quantity: 1, unit_price: 0, billingType: 'flat', rateLabel: '' }]);
   };

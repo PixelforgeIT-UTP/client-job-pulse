@@ -195,6 +195,33 @@ export default function Quotes() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Workflow Status Legend */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-sm">Workflow Status Guide</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
+            <div className="flex items-center gap-2">
+              <Badge variant="outline" className="text-amber-500 border-amber-500">Needs Approval</Badge>
+              <span>Tech created, awaiting supervisor review</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Badge variant="outline" className="text-blue-500 border-blue-500">Needs Signature</Badge>
+              <span>Approved, needs client signature</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Badge variant="outline" className="text-green-500 border-green-500">Approved</Badge>
+              <span>Signed, job created automatically</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Badge variant="outline" className="text-red-500 border-red-500">Rejected</Badge>
+              <span>Returned to tech for revision</span>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
