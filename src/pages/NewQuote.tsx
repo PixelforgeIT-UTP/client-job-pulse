@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { useNavigate } from 'react-router-dom';
@@ -11,6 +12,7 @@ import {
 } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 
 const services = [
   { name: 'Kitchen Renovation', price: 5200 },
@@ -22,6 +24,10 @@ const services = [
 
 export default function NewQuote() {
   const [clientName, setClientName] = useState('');
+  const [customerAddress, setCustomerAddress] = useState('');
+  const [customerPhone, setCustomerPhone] = useState('');
+  const [customerEmail, setCustomerEmail] = useState('');
+  const [jobDate, setJobDate] = useState('');
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const navigate = useNavigate();
@@ -41,7 +47,11 @@ export default function NewQuote() {
   };
 
   const handleSubmit = async () => {
-    if (!clientName || selectedServices.length === 0) return;
+    if (!clientName || !customerAddress || !jobDate || selectedServices.length === 0) {
+      alert('Please fill in all required fields');
+      return;
+    }
+    
     setSubmitting(true);
 
     const selectedItems = services.filter((s) =>
@@ -54,9 +64,13 @@ export default function NewQuote() {
     const { error } = await supabase.from('quotes').insert([
       {
         client_name: clientName,
+        customer_address: customerAddress,
+        customer_phone: customerPhone,
+        customer_email: customerEmail,
+        job_date: jobDate,
         job_description: jobDescription,
         amount,
-        status: 'pending',
+        status: 'pending_supervisor_approval',
         items: selectedItems,
       },
     ]);
@@ -71,6 +85,8 @@ export default function NewQuote() {
     }
   };
 
+  const isFormValid = clientName && customerAddress && jobDate && selectedServices.length > 0;
+
   return (
     <div className="max-w-3xl mx-auto mt-8">
       <Card>
@@ -78,44 +94,93 @@ export default function NewQuote() {
           <CardTitle>Create New Quote</CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="clientName">Client Name *</Label>
+              <Input
+                id="clientName"
+                value={clientName}
+                onChange={(e) => setClientName(e.target.value)}
+                placeholder="e.g. Acme Corporation"
+                required
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="jobDate">Job Date *</Label>
+              <Input
+                id="jobDate"
+                type="date"
+                value={jobDate}
+                onChange={(e) => setJobDate(e.target.value)}
+                required
+              />
+            </div>
+          </div>
+
           <div>
-            <Label htmlFor="clientName">Client Name</Label>
-            <Input
-              id="clientName"
-              value={clientName}
-              onChange={(e) => setClientName(e.target.value)}
-              placeholder="e.g. Acme Corporation"
+            <Label htmlFor="customerAddress">Customer Address *</Label>
+            <Textarea
+              id="customerAddress"
+              value={customerAddress}
+              onChange={(e) => setCustomerAddress(e.target.value)}
+              placeholder="Full customer address"
               required
             />
           </div>
 
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="customerPhone">Customer Phone</Label>
+              <Input
+                id="customerPhone"
+                value={customerPhone}
+                onChange={(e) => setCustomerPhone(e.target.value)}
+                placeholder="(555) 123-4567"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="customerEmail">Customer Email</Label>
+              <Input
+                id="customerEmail"
+                type="email"
+                value={customerEmail}
+                onChange={(e) => setCustomerEmail(e.target.value)}
+                placeholder="customer@example.com"
+              />
+            </div>
+          </div>
+
           <div>
-            <Label>Services</Label>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Label>Services *</Label>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2">
               {services.map((service) => (
                 <label
                   key={service.name}
-                  className="flex items-center gap-2 cursor-pointer"
+                  className="flex items-center gap-2 cursor-pointer p-2 border rounded hover:bg-gray-50"
                 >
                   <Checkbox
                     checked={selectedServices.includes(service.name)}
                     onCheckedChange={() => toggleService(service.name)}
                   />
-                  {service.name} (${service.price})
+                  <span className="flex-1">{service.name}</span>
+                  <span className="font-medium">${service.price}</span>
                 </label>
               ))}
             </div>
           </div>
 
-          <div className="text-right text-lg font-bold">
-            Total: ${getTotal()}
+          <div className="text-right text-lg font-bold border-t pt-4">
+            Total: ${getTotal().toLocaleString()}
           </div>
 
           <Button
-            disabled={!clientName || selectedServices.length === 0 || submitting}
+            disabled={!isFormValid || submitting}
             onClick={handleSubmit}
+            className="w-full"
           >
-            {submitting ? 'Submitting...' : 'Create Quote'}
+            {submitting ? 'Creating Quote...' : 'Create Quote'}
           </Button>
         </CardContent>
       </Card>

@@ -459,12 +459,20 @@ export type Database = {
           amount: number
           client_name: string
           created_by: string | null
+          customer_address: string | null
+          customer_email: string | null
+          customer_phone: string | null
           date: string | null
           id: string
           items: Json | null
+          job_date: string | null
           job_description: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
           signature: string | null
+          signature_data: string | null
           status: string | null
+          supervisor_notes: string | null
           updated_at: string | null
           updated_by: string | null
         }
@@ -472,12 +480,20 @@ export type Database = {
           amount: number
           client_name: string
           created_by?: string | null
+          customer_address?: string | null
+          customer_email?: string | null
+          customer_phone?: string | null
           date?: string | null
           id?: string
           items?: Json | null
+          job_date?: string | null
           job_description?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
           signature?: string | null
+          signature_data?: string | null
           status?: string | null
+          supervisor_notes?: string | null
           updated_at?: string | null
           updated_by?: string | null
         }
@@ -485,16 +501,32 @@ export type Database = {
           amount?: number
           client_name?: string
           created_by?: string | null
+          customer_address?: string | null
+          customer_email?: string | null
+          customer_phone?: string | null
           date?: string | null
           id?: string
           items?: Json | null
+          job_date?: string | null
           job_description?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
           signature?: string | null
+          signature_data?: string | null
           status?: string | null
+          supervisor_notes?: string | null
           updated_at?: string | null
           updated_by?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "quotes_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
