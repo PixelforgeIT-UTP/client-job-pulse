@@ -32,7 +32,7 @@ export function PendingQuotesCard() {
       const { data: quotes, error } = await supabase
         .from('quotes')
         .select('*')
-        .eq('status', 'pending')
+        .eq('status', 'pending_supervisor_approval')
         .order('date', { ascending: false });
 
       if (error) throw error;
@@ -70,7 +70,7 @@ export function PendingQuotesCard() {
     }
   };
 
-  const handleQuoteApproval = async (quoteId: string, status: 'approved' | 'rejected') => {
+  const handleQuoteApproval = async (quoteId: string, status: 'pending_client_signature' | 'rejected') => {
     try {
       const { error } = await supabase
         .from('quotes')
@@ -79,7 +79,7 @@ export function PendingQuotesCard() {
 
       if (error) throw error;
 
-      fetchPendingQuotes(); // Refresh the list
+      fetchPendingQuotes();
     } catch (error) {
       console.error('Error updating quote status:', error);
     }
@@ -106,50 +106,56 @@ export function PendingQuotesCard() {
         <CardTitle>Quotes Pending Approval</CardTitle>
       </CardHeader>
       <CardContent>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Client</TableHead>
-              <TableHead>Description</TableHead>
-              <TableHead>Amount</TableHead>
-              <TableHead>Created By</TableHead>
-              <TableHead>Date</TableHead>
-              <TableHead>Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {pendingQuotes.map((quote) => (
-              <TableRow key={quote.id}>
-                <TableCell className="font-medium">{quote.client_name}</TableCell>
-                <TableCell className="max-w-md">
-                  <div className="truncate" title={quote.job_description}>
-                    {quote.job_description}
-                  </div>
-                </TableCell>
-                <TableCell>${quote.amount.toFixed(2)}</TableCell>
-                <TableCell>{quote.created_by_name}</TableCell>
-                <TableCell>{format(new Date(quote.date), 'MMM d, yyyy')}</TableCell>
-                <TableCell>
-                  <div className="flex space-x-2">
-                    <Button
-                      size="sm"
-                      onClick={() => handleQuoteApproval(quote.id, 'approved')}
-                    >
-                      <Check className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="destructive"
-                      onClick={() => handleQuoteApproval(quote.id, 'rejected')}
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </TableCell>
+        {pendingQuotes.length === 0 ? (
+          <div className="text-center py-8 text-muted-foreground">
+            No quotes pending approval
+          </div>
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Client</TableHead>
+                <TableHead>Description</TableHead>
+                <TableHead>Amount</TableHead>
+                <TableHead>Created By</TableHead>
+                <TableHead>Date</TableHead>
+                <TableHead>Actions</TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+              {pendingQuotes.map((quote) => (
+                <TableRow key={quote.id}>
+                  <TableCell className="font-medium">{quote.client_name}</TableCell>
+                  <TableCell className="max-w-md">
+                    <div className="truncate" title={quote.job_description}>
+                      {quote.job_description}
+                    </div>
+                  </TableCell>
+                  <TableCell>${quote.amount.toFixed(2)}</TableCell>
+                  <TableCell>{quote.created_by_name}</TableCell>
+                  <TableCell>{format(new Date(quote.date), 'MMM d, yyyy')}</TableCell>
+                  <TableCell>
+                    <div className="flex space-x-2">
+                      <Button
+                        size="sm"
+                        onClick={() => handleQuoteApproval(quote.id, 'pending_client_signature')}
+                      >
+                        <Check className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        onClick={() => handleQuoteApproval(quote.id, 'rejected')}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
       </CardContent>
     </Card>
   );

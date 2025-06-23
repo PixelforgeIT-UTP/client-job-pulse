@@ -13,14 +13,21 @@ import {
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Plus, X } from 'lucide-react';
 
-const services = [
+const presetServices = [
   { name: 'Kitchen Renovation', price: 5200 },
   { name: 'Electrical Inspection', price: 750 },
   { name: 'Plumbing Repair', price: 1200 },
   { name: 'HVAC Installation', price: 3800 },
   { name: 'Office Remodel', price: 12500 },
 ];
+
+type CustomItem = {
+  id: string;
+  name: string;
+  price: number;
+};
 
 export default function NewQuote() {
   const [clientName, setClientName] = useState('');
@@ -29,6 +36,9 @@ export default function NewQuote() {
   const [customerEmail, setCustomerEmail] = useState('');
   const [jobDate, setJobDate] = useState('');
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
+  const [customItems, setCustomItems] = useState<CustomItem[]>([]);
+  const [customItemName, setCustomItemName] = useState('');
+  const [customItemPrice, setCustomItemPrice] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const navigate = useNavigate();
 
@@ -40,25 +50,47 @@ export default function NewQuote() {
     );
   };
 
+  const addCustomItem = () => {
+    if (customItemName && customItemPrice) {
+      const newItem: CustomItem = {
+        id: Date.now().toString(),
+        name: customItemName,
+        price: parseFloat(customItemPrice) || 0,
+      };
+      setCustomItems([...customItems, newItem]);
+      setCustomItemName('');
+      setCustomItemPrice('');
+    }
+  };
+
+  const removeCustomItem = (id: string) => {
+    setCustomItems(customItems.filter(item => item.id !== id));
+  };
+
   const getTotal = () => {
-    return services
+    const presetTotal = presetServices
       .filter((s) => selectedServices.includes(s.name))
       .reduce((acc, s) => acc + s.price, 0);
+    
+    const customTotal = customItems.reduce((acc, item) => acc + item.price, 0);
+    
+    return presetTotal + customTotal;
   };
 
   const handleSubmit = async () => {
-    if (!clientName || !customerAddress || !jobDate || selectedServices.length === 0) {
-      alert('Please fill in all required fields');
+    if (!clientName || !customerAddress || !jobDate || (selectedServices.length === 0 && customItems.length === 0)) {
+      alert('Please fill in all required fields and select at least one service');
       return;
     }
     
     setSubmitting(true);
 
-    const selectedItems = services.filter((s) =>
+    const selectedPresetItems = presetServices.filter((s) =>
       selectedServices.includes(s.name)
     );
 
-    const jobDescription = selectedItems.map((s) => s.name).join(', ');
+    const allItems = [...selectedPresetItems, ...customItems];
+    const jobDescription = allItems.map((s) => s.name).join(', ');
     const amount = getTotal();
 
     const { error } = await supabase.from('quotes').insert([
@@ -71,7 +103,7 @@ export default function NewQuote() {
         job_description: jobDescription,
         amount,
         status: 'pending_supervisor_approval',
-        items: selectedItems,
+        items: allItems,
       },
     ]);
 
@@ -85,7 +117,7 @@ export default function NewQuote() {
     }
   };
 
-  const isFormValid = clientName && customerAddress && jobDate && selectedServices.length > 0;
+  const isFormValid = clientName && customerAddress && jobDate && (selectedServices.length > 0 || customItems.length > 0);
 
   return (
     <div className="max-w-3xl mx-auto mt-8">
@@ -153,9 +185,9 @@ export default function NewQuote() {
           </div>
 
           <div>
-            <Label>Services *</Label>
+            <Label>Preset Services</Label>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2">
-              {services.map((service) => (
+              {presetServices.map((service) => (
                 <label
                   key={service.name}
                   className="flex items-center gap-2 cursor-pointer p-2 border rounded hover:bg-gray-50"
@@ -168,6 +200,49 @@ export default function NewQuote() {
                   <span className="font-medium">${service.price}</span>
                 </label>
               ))}
+            </div>
+          </div>
+
+          <div>
+            <Label>Custom Line Items</Label>
+            <div className="space-y-4 mt-2">
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Service name"
+                  value={customItemName}
+                  onChange={(e) => setCustomItemName(e.target.value)}
+                  className="flex-1"
+                />
+                <Input
+                  type="number"
+                  placeholder="Price"
+                  value={customItemPrice}
+                  onChange={(e) => setCustomItemPrice(e.target.value)}
+                  className="w-32"
+                />
+                <Button type="button" onClick={addCustomItem} size="sm">
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </div>
+
+              {customItems.length > 0 && (
+                <div className="space-y-2">
+                  {customItems.map((item) => (
+                    <div key={item.id} className="flex items-center gap-2 p-2 border rounded">
+                      <span className="flex-1">{item.name}</span>
+                      <span className="font-medium">${item.price}</span>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => removeCustomItem(item.id)}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
 

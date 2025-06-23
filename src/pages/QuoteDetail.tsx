@@ -68,7 +68,7 @@ export default function QuoteDetail() {
   };
 
   const canSupervisorApprove = userRole === 'supervisor' || userRole === 'admin';
-  const canTechSignature = quote?.status === 'pending_client_signature';
+  const canCollectSignature = quote?.status === 'pending_client_signature';
   const showSupervisorApproval = quote?.status === 'pending_supervisor_approval' && canSupervisorApprove;
 
   const refreshQuote = async () => {
@@ -160,7 +160,7 @@ export default function QuoteDetail() {
           </Button>
         )}
 
-        {canTechSignature && (
+        {canCollectSignature && (
           <Button onClick={() => setShowSignatureDialog(true)}>
             Get Client Signature
           </Button>
