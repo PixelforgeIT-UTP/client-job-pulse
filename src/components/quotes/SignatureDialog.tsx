@@ -35,8 +35,10 @@ export default function SignatureDialog({
     let signatureData = null;
     
     if (signatureType === 'draw') {
-      if (!sigCanvas.current?.isEmpty()) {
-        signatureData = sigCanvas.current?.getTrimmedCanvas().toDataURL('image/png');
+      if (sigCanvas.current && !sigCanvas.current.isEmpty()) {
+        // Use toDataURL directly instead of getTrimmedCanvas
+        const canvas = sigCanvas.current.getCanvas();
+        signatureData = canvas.toDataURL('image/png');
       }
     } else {
       signatureData = textSignature;
@@ -62,6 +64,12 @@ export default function SignatureDialog({
     if (!error) {
       onSuccess();
       onOpenChange(false);
+      // Clear the signature after successful submission
+      if (signatureType === 'draw') {
+        sigCanvas.current?.clear();
+      } else {
+        setTextSignature('');
+      }
     } else {
       alert('Error saving signature. Check console.');
       console.error(error);
