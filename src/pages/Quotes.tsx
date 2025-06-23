@@ -98,7 +98,8 @@ export default function Quotes() {
     return 'Quote created';
   };
 
-  const canCreateQuote = userRole === 'tech' || userRole === 'admin';
+  // Allow any authenticated user to create quotes
+  const canCreateQuote = true;
 
   return (
     <div className="space-y-6">
