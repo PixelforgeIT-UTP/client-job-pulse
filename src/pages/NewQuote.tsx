@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { useNavigate } from 'react-router-dom';
@@ -77,6 +76,46 @@ export default function NewQuote() {
     return presetTotal + customTotal;
   };
 
+  const findOrCreateCustomer = async (name: string, email: string, phone: string, address: string) => {
+    // First, try to find existing customer by name and email
+    const { data: existingCustomer, error: searchError } = await supabase
+      .from('clients')
+      .select('id')
+      .or(`name.ilike.%${name}%,email.ilike.%${email}%`)
+      .limit(1)
+      .single();
+
+    if (searchError && searchError.code !== 'PGRST116') {
+      console.error('Error searching for customer:', searchError);
+      return null;
+    }
+
+    if (existingCustomer) {
+      console.log('Found existing customer:', existingCustomer.id);
+      return existingCustomer.id;
+    }
+
+    // Create new customer
+    const { data: newCustomer, error: createError } = await supabase
+      .from('clients')
+      .insert([{
+        name: clientName,
+        email: customerEmail || null,
+        phone: customerPhone || null,
+        address: customerAddress,
+      }])
+      .select('id')
+      .single();
+
+    if (createError) {
+      console.error('Error creating customer:', createError);
+      return null;
+    }
+
+    console.log('Created new customer:', newCustomer.id);
+    return newCustomer.id;
+  };
+
   const handleSubmit = async () => {
     if (!clientName || !customerAddress || !jobDate || (selectedServices.length === 0 && customItems.length === 0)) {
       alert('Please fill in all required fields and select at least one service');
@@ -85,35 +124,48 @@ export default function NewQuote() {
     
     setSubmitting(true);
 
-    const selectedPresetItems = presetServices.filter((s) =>
-      selectedServices.includes(s.name)
-    );
+    try {
+      // Find or create customer
+      const customerId = await findOrCreateCustomer(
+        clientName,
+        customerEmail,
+        customerPhone,
+        customerAddress
+      );
 
-    const allItems = [...selectedPresetItems, ...customItems];
-    const jobDescription = allItems.map((s) => s.name).join(', ');
-    const amount = getTotal();
+      const selectedPresetItems = presetServices.filter((s) =>
+        selectedServices.includes(s.name)
+      );
 
-    const { error } = await supabase.from('quotes').insert([
-      {
-        client_name: clientName,
-        customer_address: customerAddress,
-        customer_phone: customerPhone,
-        customer_email: customerEmail,
-        job_date: jobDate,
-        job_description: jobDescription,
-        amount,
-        status: 'pending_supervisor_approval',
-        items: allItems,
-      },
-    ]);
+      const allItems = [...selectedPresetItems, ...customItems];
+      const jobDescription = allItems.map((s) => s.name).join(', ');
+      const amount = getTotal();
 
-    setSubmitting(false);
+      const { error } = await supabase.from('quotes').insert([
+        {
+          client_name: clientName,
+          customer_id: customerId,
+          customer_address: customerAddress,
+          customer_phone: customerPhone,
+          customer_email: customerEmail,
+          job_date: jobDate,
+          job_description: jobDescription,
+          amount,
+          status: 'pending_supervisor_approval',
+          items: allItems,
+        },
+      ]);
 
-    if (!error) {
+      if (error) {
+        throw error;
+      }
+
       navigate('/quotes');
-    } else {
+    } catch (error) {
+      console.error('Error creating quote:', error);
       alert('Error creating quote. Check console.');
-      console.error(error);
+    } finally {
+      setSubmitting(false);
     }
   };
 

@@ -1,4 +1,3 @@
-
 import { useState, useRef } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import SignatureCanvas from 'react-signature-canvas';
@@ -31,6 +30,33 @@ export default function SignatureDialog({
   const [textSignature, setTextSignature] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
+  const sendConfirmationEmail = async (quoteData: any, signatureData: string) => {
+    if (!quoteData.customer_email) {
+      console.log('No customer email provided, skipping email notification');
+      return;
+    }
+
+    try {
+      const { error } = await supabase.functions.invoke('send-quote-confirmation', {
+        body: {
+          quoteId: quoteData.id,
+          customerEmail: quoteData.customer_email,
+          customerName: quoteData.client_name,
+          amount: quoteData.amount,
+          signatureData: signatureData,
+        },
+      });
+
+      if (error) {
+        console.error('Error sending confirmation email:', error);
+      } else {
+        console.log('Confirmation email sent successfully');
+      }
+    } catch (error) {
+      console.error('Error invoking email function:', error);
+    }
+  };
+
   const handleSubmit = async () => {
     let signatureData = null;
     
@@ -59,9 +85,10 @@ export default function SignatureDialog({
       })
       .eq('id', quote.id);
 
-    setSubmitting(false);
-
     if (!error) {
+      // Send confirmation email
+      await sendConfirmationEmail(quote, signatureData);
+      
       onSuccess();
       onOpenChange(false);
       // Clear the signature after successful submission
@@ -74,6 +101,8 @@ export default function SignatureDialog({
       alert('Error saving signature. Check console.');
       console.error(error);
     }
+
+    setSubmitting(false);
   };
 
   const clearSignature = () => {

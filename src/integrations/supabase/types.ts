@@ -435,18 +435,21 @@ export type Database = {
       }
       profiles: {
         Row: {
+          avatar_url: string | null
           created_at: string | null
           full_name: string | null
           id: string
           role: string | null
         }
         Insert: {
+          avatar_url?: string | null
           created_at?: string | null
           full_name?: string | null
           id: string
           role?: string | null
         }
         Update: {
+          avatar_url?: string | null
           created_at?: string | null
           full_name?: string | null
           id?: string
@@ -461,6 +464,7 @@ export type Database = {
           created_by: string | null
           customer_address: string | null
           customer_email: string | null
+          customer_id: string | null
           customer_phone: string | null
           date: string | null
           id: string
@@ -482,6 +486,7 @@ export type Database = {
           created_by?: string | null
           customer_address?: string | null
           customer_email?: string | null
+          customer_id?: string | null
           customer_phone?: string | null
           date?: string | null
           id?: string
@@ -503,6 +508,7 @@ export type Database = {
           created_by?: string | null
           customer_address?: string | null
           customer_email?: string | null
+          customer_id?: string | null
           customer_phone?: string | null
           date?: string | null
           id?: string
@@ -519,6 +525,13 @@ export type Database = {
           updated_by?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "quotes_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "quotes_reviewed_by_fkey"
             columns: ["reviewed_by"]
