@@ -39,7 +39,67 @@ export default function NewQuote() {
   const [customItemName, setCustomItemName] = useState('');
   const [customItemPrice, setCustomItemPrice] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const navigate = useNavigate();
+
+  const validateEmail = (email: string): boolean => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email) && email.length <= 254;
+  };
+
+  const validatePhone = (phone: string): boolean => {
+    const phoneRegex = /^[\+]?[1-9][\d]{0,15}$/;
+    return phoneRegex.test(phone.replace(/[\s\-\(\)]/g, ''));
+  };
+
+  const validateForm = (): boolean => {
+    const newErrors: Record<string, string> = {};
+
+    if (!clientName.trim()) {
+      newErrors.clientName = 'Client name is required';
+    } else if (clientName.length > 100) {
+      newErrors.clientName = 'Client name must be less than 100 characters';
+    }
+
+    if (!customerEmail.trim()) {
+      newErrors.customerEmail = 'Email is required';
+    } else if (!validateEmail(customerEmail)) {
+      newErrors.customerEmail = 'Please enter a valid email address';
+    }
+
+    if (!customerPhone.trim()) {
+      newErrors.customerPhone = 'Phone number is required';
+    } else if (!validatePhone(customerPhone)) {
+      newErrors.customerPhone = 'Please enter a valid phone number';
+    }
+
+    if (!customerAddress.trim()) {
+      newErrors.customerAddress = 'Address is required';
+    } else if (customerAddress.length > 500) {
+      newErrors.customerAddress = 'Address must be less than 500 characters';
+    }
+
+    if (!jobDate) {
+      newErrors.jobDate = 'Job date is required';
+    } else {
+      const selectedDate = new Date(jobDate);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      if (selectedDate < today) {
+        newErrors.jobDate = 'Job date cannot be in the past';
+      }
+    }
+
+    const totalAmount = getTotal();
+    if (totalAmount <= 0) {
+      newErrors.services = 'Please select at least one service or add custom items';
+    } else if (totalAmount > 1000000) {
+      newErrors.services = 'Total amount cannot exceed $1,000,000';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
 
   const toggleService = (serviceName: string) => {
     setSelectedServices((prev) =>
@@ -117,8 +177,7 @@ export default function NewQuote() {
   };
 
   const handleSubmit = async () => {
-    if (!clientName || !customerAddress || !jobDate || (selectedServices.length === 0 && customItems.length === 0)) {
-      alert('Please fill in all required fields and select at least one service');
+    if (!validateForm()) {
       return;
     }
     
@@ -184,10 +243,19 @@ export default function NewQuote() {
               <Input
                 id="clientName"
                 value={clientName}
-                onChange={(e) => setClientName(e.target.value)}
+                onChange={(e) => {
+                  setClientName(e.target.value);
+                  if (errors.clientName) {
+                    setErrors(prev => ({ ...prev, clientName: '' }));
+                  }
+                }}
                 placeholder="e.g. Acme Corporation"
                 required
+                className={errors.clientName ? 'border-destructive' : ''}
               />
+              {errors.clientName && (
+                <p className="text-sm text-destructive mt-1">{errors.clientName}</p>
+              )}
             </div>
 
             <div>
@@ -196,9 +264,18 @@ export default function NewQuote() {
                 id="jobDate"
                 type="date"
                 value={jobDate}
-                onChange={(e) => setJobDate(e.target.value)}
+                onChange={(e) => {
+                  setJobDate(e.target.value);
+                  if (errors.jobDate) {
+                    setErrors(prev => ({ ...prev, jobDate: '' }));
+                  }
+                }}
                 required
+                className={errors.jobDate ? 'border-destructive' : ''}
               />
+              {errors.jobDate && (
+                <p className="text-sm text-destructive mt-1">{errors.jobDate}</p>
+              )}
             </div>
           </div>
 
@@ -207,32 +284,61 @@ export default function NewQuote() {
             <Textarea
               id="customerAddress"
               value={customerAddress}
-              onChange={(e) => setCustomerAddress(e.target.value)}
+              onChange={(e) => {
+                setCustomerAddress(e.target.value);
+                if (errors.customerAddress) {
+                  setErrors(prev => ({ ...prev, customerAddress: '' }));
+                }
+              }}
               placeholder="Full customer address"
               required
+              className={errors.customerAddress ? 'border-destructive' : ''}
             />
+            {errors.customerAddress && (
+              <p className="text-sm text-destructive mt-1">{errors.customerAddress}</p>
+            )}
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="customerPhone">Customer Phone</Label>
+              <Label htmlFor="customerPhone">Customer Phone *</Label>
               <Input
                 id="customerPhone"
                 value={customerPhone}
-                onChange={(e) => setCustomerPhone(e.target.value)}
+                onChange={(e) => {
+                  setCustomerPhone(e.target.value);
+                  if (errors.customerPhone) {
+                    setErrors(prev => ({ ...prev, customerPhone: '' }));
+                  }
+                }}
                 placeholder="(555) 123-4567"
+                required
+                className={errors.customerPhone ? 'border-destructive' : ''}
               />
+              {errors.customerPhone && (
+                <p className="text-sm text-destructive mt-1">{errors.customerPhone}</p>
+              )}
             </div>
 
             <div>
-              <Label htmlFor="customerEmail">Customer Email</Label>
+              <Label htmlFor="customerEmail">Customer Email *</Label>
               <Input
                 id="customerEmail"
                 type="email"
                 value={customerEmail}
-                onChange={(e) => setCustomerEmail(e.target.value)}
+                onChange={(e) => {
+                  setCustomerEmail(e.target.value);
+                  if (errors.customerEmail) {
+                    setErrors(prev => ({ ...prev, customerEmail: '' }));
+                  }
+                }}
                 placeholder="customer@example.com"
+                required
+                className={errors.customerEmail ? 'border-destructive' : ''}
               />
+              {errors.customerEmail && (
+                <p className="text-sm text-destructive mt-1">{errors.customerEmail}</p>
+              )}
             </div>
           </div>
 
@@ -246,13 +352,21 @@ export default function NewQuote() {
                 >
                   <Checkbox
                     checked={selectedServices.includes(service.name)}
-                    onCheckedChange={() => toggleService(service.name)}
+                    onCheckedChange={() => {
+                      toggleService(service.name);
+                      if (errors.services) {
+                        setErrors(prev => ({ ...prev, services: '' }));
+                      }
+                    }}
                   />
                   <span className="flex-1">{service.name}</span>
                   <span className="font-medium">${service.price}</span>
                 </label>
               ))}
             </div>
+            {errors.services && (
+              <p className="text-sm text-destructive mt-1">{errors.services}</p>
+            )}
           </div>
 
           <div>
