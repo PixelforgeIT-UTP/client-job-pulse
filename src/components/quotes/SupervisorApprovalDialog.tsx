@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { usePushNotifications } from '@/hooks/usePushNotifications';
 
 interface SupervisorApprovalDialogProps {
   quote: any;
@@ -29,6 +30,7 @@ export default function SupervisorApprovalDialog({
   const [amount, setAmount] = useState(quote?.amount || 0);
   const [supervisorNotes, setSupervisorNotes] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const { showLocalNotification } = usePushNotifications();
 
   const handleApprove = async () => {
     setSubmitting(true);
@@ -43,15 +45,48 @@ export default function SupervisorApprovalDialog({
       })
       .eq('id', quote.id);
 
-    setSubmitting(false);
-
     if (!error) {
+      // Send notification to the quote creator
+      try {
+        const { error: notificationError } = await supabase.functions.invoke('send-push-notification', {
+          body: {
+            userIds: [quote.created_by],
+            title: 'Quote Approved',
+            body: `Quote #${quote.id.slice(-8)} has been approved and is ready for client signature`,
+            data: {
+              type: 'quote_approved',
+              quoteId: quote.id,
+              url: `/quotes/${quote.id}`
+            }
+          }
+        });
+
+        if (notificationError) {
+          console.error('Failed to send notification:', notificationError);
+        }
+
+        // Also show local notification
+        showLocalNotification({
+          title: 'Quote Approved',
+          body: `Quote #${quote.id.slice(-8)} has been approved and is ready for client signature`,
+          data: {
+            type: 'quote_approved',
+            quoteId: quote.id,
+            url: `/quotes/${quote.id}`
+          }
+        });
+      } catch (error) {
+        console.error('Error sending notification:', error);
+      }
+
       onSuccess();
       onOpenChange(false);
     } else {
       alert('Error approving quote. Check console.');
       console.error(error);
     }
+
+    setSubmitting(false);
   };
 
   const handleReject = async () => {

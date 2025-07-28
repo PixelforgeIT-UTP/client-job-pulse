@@ -61,9 +61,9 @@ export default function Sidebar() {
 
   return <>
       {/* Mobile menu button */}
-      <div className="lg:hidden fixed top-4 left-4 z-40">
-        <Button variant="ghost" size="icon" onClick={() => setIsMobileOpen(!isMobileOpen)} aria-label="Toggle menu">
-          {isMobileOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+      <div className="lg:hidden fixed top-3 left-3 z-40">
+        <Button variant="ghost" size="sm" onClick={() => setIsMobileOpen(!isMobileOpen)} aria-label="Toggle menu">
+          {isMobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
         </Button>
       </div>
 
@@ -77,11 +77,11 @@ export default function Sidebar() {
 
       {/* Sidebar for mobile */}
       <div className={cn(
-        "fixed top-0 left-0 z-40 h-full w-80 bg-white shadow-xl transform transition-transform duration-300 ease-in-out lg:hidden border-r border-gray-200",
+        "fixed top-0 left-0 z-40 h-full w-72 sm:w-80 bg-card shadow-xl transform transition-transform duration-300 ease-in-out lg:hidden border-r border-border",
         isMobileOpen ? "translate-x-0" : "-translate-x-full"
       )}>
-        <div className="p-5">
-          <h1 className="text-xl font-bold text-gray-800">Job Pulse</h1>
+        <div className="p-4 sm:p-5">
+          <h1 className="text-lg sm:text-xl font-bold text-foreground">Job Pulse</h1>
         </div>
         <nav className="mt-5 px-2 space-y-1">
           {navigation.map(item => (
@@ -89,12 +89,12 @@ export default function Sidebar() {
               key={item.name} 
               to={item.href} 
               onClick={() => setIsMobileOpen(false)} 
-              className={cn(
-                item.href === location.pathname 
-                  ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-600' 
-                  : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900', 
-                'group flex items-center px-3 py-2 text-sm font-medium rounded-l-md'
-              )}
+                        className={cn(
+                          item.href === location.pathname 
+                            ? 'bg-primary/10 text-primary border-r-2 border-primary' 
+                            : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground', 
+                          'group flex items-center px-3 py-2 text-sm font-medium rounded-l-md transition-colors'
+                        )}
             >
               <item.icon 
                 className={cn(
@@ -113,9 +113,9 @@ export default function Sidebar() {
 
       {/* Static sidebar for desktop */}
       <div className="hidden lg:fixed lg:inset-y-0 lg:z-10 lg:flex lg:w-64 lg:flex-col">
-        <div className="flex grow flex-col gap-y-5 overflow-y-auto border-r border-gray-200 px-6 bg-white">
+        <div className="flex grow flex-col gap-y-5 overflow-y-auto border-r border-border px-6 bg-card">
           <div className="flex h-16 shrink-0 items-center">
-            <h1 className="text-xl font-bold text-gray-800">Job Pulse</h1>
+            <h1 className="text-xl font-bold text-foreground">Job Pulse</h1>
           </div>
           <nav className="flex flex-1 flex-col">
             <ul className="flex flex-1 flex-col gap-y-6 mx-[2px] my-0 bg-inherit">
@@ -127,9 +127,9 @@ export default function Sidebar() {
                         to={item.href} 
                         className={cn(
                           item.href === location.pathname 
-                            ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-600' 
-                            : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900', 
-                          'group flex items-center gap-x-3 rounded-l-md p-2 text-sm leading-6 font-semibold'
+                            ? 'bg-primary/10 text-primary border-r-2 border-primary' 
+                            : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground', 
+                          'group flex items-center gap-x-3 rounded-l-md p-2 text-sm leading-6 font-semibold transition-colors'
                         )}
                       >
                         <item.icon 

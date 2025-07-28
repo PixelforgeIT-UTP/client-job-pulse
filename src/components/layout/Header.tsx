@@ -27,8 +27,8 @@ export default function Header() {
   };
 
   return (
-    <header className="bg-gray-50 shadow-sm border-b border-gray-200">
-      <div className="flex h-16 items-center justify-end px-4 sm:px-6 lg:px-[24px] mx-[7px] gap-x-4">
+    <header className="bg-card shadow-sm border-b border-border sticky top-0 z-30">
+      <div className="flex h-16 items-center justify-end px-3 sm:px-4 lg:px-8 gap-x-2 sm:gap-x-4">
         <Button variant="ghost" size="icon">
           <Bell className="h-5 w-5" />
           <span className="sr-only">View notifications</span>

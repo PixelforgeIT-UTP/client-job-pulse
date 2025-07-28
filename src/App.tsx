@@ -1,10 +1,11 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { usePushNotifications } from "@/hooks/usePushNotifications";
 import "mapbox-gl/dist/mapbox-gl.css";
 import "@mapbox/mapbox-gl-geocoder/dist/mapbox-gl-geocoder.css";
 
@@ -33,6 +34,19 @@ import AdminDashboard from "@/pages/AdminDashboard";
 const queryClient = new QueryClient();
 
 const App: React.FC = () => {
+  const { initialize, requestPermission } = usePushNotifications();
+
+  useEffect(() => {
+    const setupNotifications = async () => {
+      const initialized = await initialize();
+      if (initialized) {
+        await requestPermission();
+      }
+    };
+    
+    setupNotifications();
+  }, [initialize, requestPermission]);
+
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>

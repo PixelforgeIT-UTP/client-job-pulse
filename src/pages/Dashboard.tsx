@@ -76,13 +76,13 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="space-y-8">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
-        <p className="text-muted-foreground">Welcome back! Here's what's happening with your business.</p>
+    <div className="space-y-6 sm:space-y-8">
+      <div className="space-y-2">
+        <h1 className="text-xl sm:text-2xl font-bold tracking-tight">Dashboard</h1>
+        <p className="text-sm sm:text-base text-muted-foreground">Welcome back! Here's what's happening with your business.</p>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
           title="Total Clients"
           value={stats.totalClients.toString()}
@@ -108,7 +108,7 @@ export default function Dashboard() {
         />
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
+      <div className="grid gap-4 sm:gap-6 grid-cols-1 lg:grid-cols-7">
         <RecentClientsCard />
         <UpcomingJobsCard />
       </div>

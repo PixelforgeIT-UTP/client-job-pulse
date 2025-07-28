@@ -102,14 +102,14 @@ export default function Quotes() {
   const canCreateQuote = true;
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Quotes</h1>
-          <p className="text-muted-foreground">Manage your client quotes and workflow</p>
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+        <div className="space-y-1">
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight">Quotes</h1>
+          <p className="text-sm sm:text-base text-muted-foreground">Manage your client quotes and workflow</p>
         </div>
         {canCreateQuote && (
-          <Button onClick={() => navigate('/quotes/new')}>
+          <Button onClick={() => navigate('/quotes/new')} size="sm" className="w-full sm:w-auto">
             <Plus className="mr-2 h-4 w-4" />
             New Quote
           </Button>
@@ -118,19 +118,19 @@ export default function Quotes() {
 
       <Card>
         <CardHeader className="pb-3">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div>
-              <CardTitle>Quote Management</CardTitle>
-              <CardDescription>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+            <div className="space-y-1">
+              <CardTitle className="text-lg sm:text-xl">Quote Management</CardTitle>
+              <CardDescription className="text-sm leading-relaxed">
                 Track quotes through the approval workflow: Creation → Supervisor Approval → Client Signature → Job Creation
               </CardDescription>
             </div>
-            <div className="relative max-w-sm">
+            <div className="relative w-full sm:max-w-sm">
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
                 type="search"
                 placeholder="Search quotes..."
-                className="w-full pl-8"
+                className="w-full pl-8 text-sm"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
@@ -203,10 +203,10 @@ export default function Quotes() {
           <CardTitle className="text-sm">Workflow Status Guide</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
-            <div className="flex items-center gap-2">
-              <Badge variant="outline" className="text-amber-500 border-amber-500">Needs Approval</Badge>
-              <span>Tech created, awaiting supervisor review</span>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 text-xs sm:text-sm">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+              <Badge variant="outline" className="text-amber-500 border-amber-500 whitespace-nowrap">Needs Approval</Badge>
+              <span className="text-muted-foreground">Tech created, awaiting supervisor review</span>
             </div>
             <div className="flex items-center gap-2">
               <Badge variant="outline" className="text-blue-500 border-blue-500">Needs Signature</Badge>

@@ -87,9 +87,9 @@ export default function QuoteDetail() {
   if (!quote) return <div className="p-6">Quote not found.</div>;
 
   return (
-    <div className="max-w-4xl mx-auto mt-8 space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Quote #{quote.id.slice(-8)}</h1>
+    <div className="max-w-4xl mx-auto mt-4 sm:mt-8 space-y-4 sm:space-y-6 px-4 sm:px-0">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+        <h1 className="text-xl sm:text-2xl font-bold">Quote #{quote.id.slice(-8)}</h1>
         {getStatusBadge(quote.status)}
       </div>
 
@@ -98,14 +98,14 @@ export default function QuoteDetail() {
           <CardTitle>Quote Details</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             <div>
               <strong>Client:</strong> {quote.client_name}
             </div>
             <div>
               <strong>Job Date:</strong> {quote.job_date ? new Date(quote.job_date).toLocaleDateString() : 'N/A'}
             </div>
-            <div className="md:col-span-2">
+            <div className="sm:col-span-2">
               <strong>Address:</strong> {quote.customer_address}
             </div>
             <div>
@@ -153,7 +153,7 @@ export default function QuoteDetail() {
         </CardContent>
       </Card>
 
-      <div className="flex gap-4">
+      <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
         {showSupervisorApproval && (
           <Button onClick={() => setShowSupervisorDialog(true)}>
             Review & Approve Quote

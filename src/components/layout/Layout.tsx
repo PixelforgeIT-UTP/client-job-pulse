@@ -5,14 +5,16 @@ import Header from './Header';
 
 export default function Layout() {
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className="min-h-screen bg-background">
       <Sidebar />
 
       <div className="lg:pl-64">
         <Header />
         
-        <main className="py-6 px-4 sm:px-6 lg:px-8 bg-gray-100">
-          <Outlet />
+        <main className="py-4 px-3 sm:py-6 sm:px-4 lg:px-8 min-h-[calc(100vh-4rem)]">
+          <div className="mx-auto max-w-7xl">
+            <Outlet />
+          </div>
         </main>
       </div>
     </div>

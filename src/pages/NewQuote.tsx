@@ -200,7 +200,7 @@ export default function NewQuote() {
       const jobDescription = allItems.map((s) => s.name).join(', ');
       const amount = getTotal();
 
-      const { error } = await supabase.from('quotes').insert([
+      const { data: newQuote, error } = await supabase.from('quotes').insert([
         {
           client_name: clientName,
           customer_id: customerId,
@@ -213,10 +213,39 @@ export default function NewQuote() {
           status: 'pending_supervisor_approval',
           items: allItems,
         },
-      ]);
+      ]).select().single();
 
       if (error) {
         throw error;
+      }
+
+      // Trigger notification for supervisors
+      if (newQuote) {
+        try {
+          const { data: supervisors } = await supabase
+            .from('profiles')
+            .select('id')
+            .in('role', ['supervisor', 'admin']);
+
+          if (supervisors && supervisors.length > 0) {
+            const userIds = supervisors.map(s => s.id);
+
+            await supabase.functions.invoke('send-push-notification', {
+              body: {
+                userIds,
+                title: 'New Quote Requires Approval',
+                body: `Quote #${newQuote.id.slice(-8)} from ${clientName} is awaiting supervisor approval`,
+                data: {
+                  type: 'quote_approval',
+                  quoteId: newQuote.id,
+                  url: `/quotes/${newQuote.id}`
+                }
+              }
+            });
+          }
+        } catch (notificationError) {
+          console.error('Failed to send notification:', notificationError);
+        }
       }
 
       navigate('/quotes');
@@ -231,13 +260,13 @@ export default function NewQuote() {
   const isFormValid = clientName && customerAddress && jobDate && (selectedServices.length > 0 || customItems.length > 0);
 
   return (
-    <div className="max-w-3xl mx-auto mt-8">
+    <div className="max-w-3xl mx-auto mt-4 sm:mt-8 px-4 sm:px-0">
       <Card>
-        <CardHeader>
-          <CardTitle>Create New Quote</CardTitle>
+        <CardHeader className="pb-4">
+          <CardTitle className="text-lg sm:text-xl">Create New Quote</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <CardContent className="space-y-4 sm:space-y-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             <div>
               <Label htmlFor="clientName">Client Name *</Label>
               <Input

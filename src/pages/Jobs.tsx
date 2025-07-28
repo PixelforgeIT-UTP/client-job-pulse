@@ -135,14 +135,14 @@ export default function Jobs() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Jobs</h1>
-          <p className="text-muted-foreground">Manage your service jobs</p>
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+        <div className="space-y-1">
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight">Jobs</h1>
+          <p className="text-sm sm:text-base text-muted-foreground">Manage your service jobs</p>
         </div>
         {isAdmin && (
-          <Button onClick={handleAddJob}>
+          <Button onClick={handleAddJob} size="sm" className="w-full sm:w-auto">
             <Plus className="mr-2 h-4 w-4" />
             Add Job
           </Button>
@@ -151,17 +151,17 @@ export default function Jobs() {
 
       <Card>
         <CardHeader className="pb-3">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div>
-              <CardTitle>Job Management</CardTitle>
-              <CardDescription>View and manage all jobs</CardDescription>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+            <div className="space-y-1">
+              <CardTitle className="text-lg sm:text-xl">Job Management</CardTitle>
+              <CardDescription className="text-sm">View and manage all jobs</CardDescription>
             </div>
-            <div className="relative max-w-sm">
+            <div className="relative w-full sm:max-w-sm">
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
                 type="search"
                 placeholder="Search jobs..."
-                className="w-full pl-8"
+                className="w-full pl-8 text-sm"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
@@ -213,15 +213,15 @@ export default function Jobs() {
                         <TableCell className="hidden md:table-cell">{job.duration ? `${job.duration} hrs` : 'Not specified'}</TableCell>
                         <TableCell>{getStatusBadge(job.status)}</TableCell>
                         <TableCell className="text-right">
-                          <div className="flex justify-end gap-2">
-                            <Button variant="outline" size="sm" onClick={() => handleViewPhotos(job)}>
+                          <div className="flex flex-col sm:flex-row justify-end gap-1 sm:gap-2">
+                            <Button variant="outline" size="sm" onClick={() => handleViewPhotos(job)} className="text-xs sm:text-sm">
                               Photos
                             </Button>
-                            <Button variant="secondary" size="sm" onClick={() => handleViewNotes(job)}>
+                            <Button variant="secondary" size="sm" onClick={() => handleViewNotes(job)} className="text-xs sm:text-sm">
                               Notes
                             </Button>
                             {isAdmin && (
-                              <Button variant="default" size="sm" onClick={() => handleEditJob(job)}>
+                              <Button variant="default" size="sm" onClick={() => handleEditJob(job)} className="text-xs sm:text-sm">
                                 Edit
                               </Button>
                             )}

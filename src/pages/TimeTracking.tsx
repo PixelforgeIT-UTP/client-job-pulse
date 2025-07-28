@@ -131,13 +131,13 @@ export default function TimeTracking() {
   };
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Time Tracking</h1>
-        <p className="text-muted-foreground">Track time spent on jobs and tasks.</p>
+    <div className="space-y-4 sm:space-y-6">
+      <div className="space-y-1">
+        <h1 className="text-xl sm:text-2xl font-bold tracking-tight">Time Tracking</h1>
+        <p className="text-sm sm:text-base text-muted-foreground">Track time spent on jobs and tasks.</p>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2">
+      <div className="grid gap-4 sm:gap-6 grid-cols-1 lg:grid-cols-2">
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
